@@ -8,10 +8,13 @@
   "scripts": {
     "dev:url-management": "npm run dev -w services/url-management-service",
     "dev:redirect": "npm run dev -w services/redirect-service",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "loadtest": "node scripts/loadtest.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
+    "autocannon": "^8.0.0",
+    "pg": "^8.13.1",
     "typescript": "^5.9.3"
   }
 }
