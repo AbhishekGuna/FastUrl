@@ -103,7 +103,7 @@ cache-aside style, for the redirect service to read from once it exists.
 ```bash
 cp services/url-management-service/.env.example services/url-management-service/.env
 docker compose -f docker-compose.yml up -d postgres redis
-npx @better-auth/cli migrate --cwd services/url-management-service -y
+npx @better-auth/cli migrate --cwd services/url-management-service --config src/infrastructure/auth/auth.ts -y
 npm run dev -w services/url-management-service
 ```
 
