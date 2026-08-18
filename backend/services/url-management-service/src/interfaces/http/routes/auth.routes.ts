@@ -17,6 +17,14 @@ export async function authRoutes(app: FastifyInstance) {
           ...(request.body ? { body: JSON.stringify(request.body) } : {}),
         });
 
+        const password = (request.body as any)?.password;
+        if (password) {
+          const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[\W_]).+$/;
+          if (!regex.test(password)) {
+            return reply.status(400).send({ error: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character" });
+          }
+        }
+
         const response = await auth.handler(req);
         reply.status(response.status);
         response.headers.forEach((value, key) => reply.header(key, value));
