@@ -1,0 +1,17 @@
+{
+  "name": "fasturl",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "dev:url-management": "npm run dev -w services/url-management-service",
+    "dev:redirect": "npm run dev -w services/redirect-service",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.9.3"
+  }
+}
