@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
+import type { Redis } from "ioredis";
 import type { CreateUrl } from "../../../application/CreateUrl.js";
 import type { GetUrl } from "../../../application/GetUrl.js";
 import type { UpdateUrl } from "../../../application/UpdateUrl.js";
@@ -6,6 +7,7 @@ import type { DeleteUrl } from "../../../application/DeleteUrl.js";
 import type { ListUrls } from "../../../application/ListUrls.js";
 import type { UrlStatus } from "../../../domain/entities/Url.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
+import { createUrlRateLimit } from "../middleware/rateLimit.middleware.js";
 import { config } from "../../../config/index.js";
 
 interface Deps {
@@ -14,7 +16,10 @@ interface Deps {
   updateUrl: UpdateUrl;
   deleteUrl: DeleteUrl;
   listUrls: ListUrls;
+  redis: Redis;
 }
+
+const CREATE_URL_RATE_LIMIT = { max: 30, windowSeconds: 60 };
 
 const DOMAIN_ERROR_STATUS: Record<string, number> = {
   INVALID_DESTINATION: 400,
@@ -34,7 +39,9 @@ function sendDomainError(reply: FastifyReply, err: unknown) {
 const VALID_STATUSES: UrlStatus[] = ["ACTIVE", "DISABLED"];
 
 export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
-  app.post("/api/v1/urls", { preHandler: requireAuth }, async (request, reply) => {
+  const createRateLimit = createUrlRateLimit(deps.redis, CREATE_URL_RATE_LIMIT);
+
+  app.post("/api/v1/urls", { preHandler: [requireAuth, createRateLimit] }, async (request, reply) => {
     const userId = request.user!.id;
     const body = request.body as {
       destination: string;
@@ -61,9 +68,6 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
     return deps.listUrls.execute(userId, limit ? Number(limit) : undefined, offset ? Number(offset) : undefined);
   });
 
-  // Owner-scoped: this is the management API, not the public redirect
-  // path, so a shortCode belonging to someone else 404s the same as one
-  // that doesn't exist at all.
   app.get("/api/v1/urls/:shortCode", { preHandler: requireAuth }, async (request, reply) => {
     const { shortCode } = request.params as { shortCode: string };
     const url = await deps.getUrl.execute(shortCode, request.user!.id);

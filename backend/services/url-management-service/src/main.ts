@@ -1,4 +1,7 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import { Redis } from "ioredis";
 import { config } from "./config/index.js";
 import { authRoutes } from "./interfaces/http/routes/auth.routes.js";
@@ -23,12 +26,27 @@ async function main() {
   const urlRepository = new PostgresUrlRepository(pool);
   const cache = new RedisCache(redis);
 
+  await app.register(helmet);
+  await app.register(cors, { origin: config.corsOrigins });
+
+  await app.register(rateLimit, { max: 300, timeWindow: "1 minute", redis });
+
+  app.setErrorHandler((error: FastifyError, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+    if (statusCode >= 500) {
+      request.log.error(error);
+      return reply.code(500).send({ error: "Internal Server Error" });
+    }
+    return reply.code(statusCode).send({ error: error.message });
+  });
+
   const urlDeps = {
     createUrl: new CreateUrl(urlRepository, cache),
     getUrl: new GetUrl(urlRepository),
     updateUrl: new UpdateUrl(urlRepository, cache),
     deleteUrl: new DeleteUrl(urlRepository, cache),
     listUrls: new ListUrls(urlRepository),
+    redis,
   };
 
   app.get("/healthz", async () => ({ status: "ok" }));

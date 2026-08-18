@@ -1,4 +1,5 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
+import helmet from "@fastify/helmet";
 import { Redis } from "ioredis";
 import { config } from "./config/index.js";
 import { pool } from "./infrastructure/postgres/pool.js";
@@ -14,6 +15,17 @@ async function main() {
   const urlRepository = new PostgresUrlRepository(pool);
   const cache = new RedisCache(redis);
   const resolveShortCode = new ResolveShortCode(cache, urlRepository);
+
+  await app.register(helmet);
+
+  app.setErrorHandler((error: FastifyError, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+    if (statusCode >= 500) {
+      request.log.error(error);
+      return reply.code(500).send({ error: "Internal Server Error" });
+    }
+    return reply.code(statusCode).send({ error: error.message });
+  });
 
   app.get("/healthz", async () => ({ status: "ok" }));
 

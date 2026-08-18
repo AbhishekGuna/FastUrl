@@ -6,6 +6,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.route({
     method: ["GET", "POST"],
     url: "/api/auth/*",
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
     async handler(request, reply) {
       try {
         const url = new URL(request.url, `http://${request.headers.host}`);

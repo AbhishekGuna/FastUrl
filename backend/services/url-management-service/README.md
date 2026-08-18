@@ -91,6 +91,13 @@ if the code doesn't exist or isn't yours.
 Creates/updates/deletes populate or invalidate a `url:<shortCode>` Redis cache key,
 cache-aside style, for the redirect service to read from once it exists.
 
+## Hardening
+
+- `helmet` and `@fastify/cors` (origin from `CORS_ORIGINS`, also used as better-auth's `trustedOrigins`) are registered on every response.
+- `@fastify/rate-limit`: 300 req/min per IP globally; `/api/auth/*` is tightened to 10 req/min per IP; `POST /api/v1/urls` additionally allows 30 creates/min per account (Redis-backed, so it survives restarts).
+- Refuses to boot with the default `BETTER_AUTH_SECRET` when `NODE_ENV=production`.
+- Unhandled errors return a generic `500` to the client and log the real error server-side, instead of echoing internal messages.
+
 ## Running locally
 
 ```bash
