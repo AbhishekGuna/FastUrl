@@ -1,0 +1,67 @@
+databases:
+  - name: fasturl-postgres
+    plan: free
+    databaseName: fasturl
+    user: fasturl
+
+services:
+  - type: keyvalue
+    name: fasturl-redis
+    plan: free
+    ipAllowList: []
+
+  - type: web
+    name: fasturl-url-management-service
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./services/url-management-service/Dockerfile
+    dockerContext: .
+    branch: main
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fasturl-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: fasturl-redis
+          property: connectionString
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      # Set these two manually once the service has its onrender.com URL
+      # (or a custom domain), e.g. https://fasturl-url-management-service.onrender.com
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: SHORT_URL_BASE
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: fasturl-redirect-service
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./services/redirect-service/Dockerfile
+    dockerContext: .
+    branch: main
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fasturl-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: fasturl-redis
+          property: connectionString
+      - key: URL_CACHE_TTL_SECONDS
+        value: "3600"
