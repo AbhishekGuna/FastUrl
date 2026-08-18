@@ -1,6 +1,8 @@
 FROM node:20-alpine AS build
 WORKDIR /repo
 
+RUN apk add --no-cache python3 make g++
+
 COPY package.json package-lock.json ./
 COPY tsconfig.base.json ./
 COPY services/url-management-service/package.json services/url-management-service/package.json
