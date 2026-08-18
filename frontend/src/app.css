@@ -1,0 +1,435 @@
+/* Layout ------------------------------------------------------------- */
+
+.page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-center {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.topbar-email {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wordmark {
+  font-weight: 700;
+  font-size: 1.0625rem;
+  letter-spacing: -0.01em;
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Buttons -------------------------------------------------------------- */
+
+.primary-button,
+.ghost-button,
+.row-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+}
+.primary-button:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ghost-button {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.875rem;
+}
+.ghost-button:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.row-action {
+  background: transparent;
+  color: var(--ink-soft);
+  border: none;
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.8125rem;
+}
+.row-action:hover:not(:disabled) {
+  color: var(--accent);
+}
+.row-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chevron-open {
+  transform: rotate(180deg);
+  transition: transform 150ms ease;
+}
+
+.spin {
+  animation: spin 800ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Create form ------------------------------------------------------------ */
+
+.create-form {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 4px;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.create-form-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.create-form-destination {
+  flex: 1;
+  min-width: 0;
+}
+
+.create-form-options {
+  display: flex;
+  gap: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.create-form-options label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+  flex: 1;
+}
+
+/* Form fields -------------------------------------------------------- */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="datetime-local"] {
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: var(--space-3);
+  background: var(--surface);
+  caret-color: var(--accent);
+}
+input[type="text"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="password"]:focus-visible,
+input[type="datetime-local"]:focus-visible {
+  border-color: var(--accent);
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+.form-error.banner {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: var(--space-3) var(--space-4);
+  margin: 0;
+}
+
+/* Ledger table --------------------------------------------------------- */
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ledger th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.ledger td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ledger tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ledger tbody tr:hover td {
+  background: var(--paper);
+}
+
+.col-code {
+  width: 12ch;
+  font-weight: 600;
+}
+
+.col-destination {
+  max-width: 0;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+.col-created {
+  white-space: nowrap;
+  color: var(--ink-faint);
+  font-size: 0.875rem;
+}
+
+.col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.edit-row td {
+  background: var(--paper);
+  padding: var(--space-3) var(--space-4);
+}
+
+.edit-form {
+  display: flex;
+  gap: var(--space-3);
+}
+.edit-form input {
+  flex: 1;
+}
+
+.load-more {
+  align-self: center;
+}
+
+/* Status --------------------------------------------------------------- */
+
+.status {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.status-active {
+  color: var(--accent);
+}
+.status-disabled {
+  color: var(--ink-faint);
+}
+.status-expired {
+  color: var(--danger);
+}
+
+/* Empty + loading -------------------------------------------------------- */
+
+.empty-state {
+  border: 1px dashed var(--line-strong);
+  border-radius: 4px;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--ink-soft);
+}
+.empty-state-sub {
+  color: var(--ink-faint);
+  font-size: 0.875rem;
+  margin-top: var(--space-2);
+}
+
+.ledger-skeleton {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ledger-skeleton-row {
+  height: 2.5rem;
+  border-radius: 3px;
+  background: var(--line);
+  animation: pulse 1.3s ease-in-out infinite;
+}
+
+/* Auth ------------------------------------------------------------------ */
+
+.auth-screen {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.auth-sheet {
+  width: 100%;
+  max-width: 23rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 4px;
+  padding: var(--space-6);
+}
+
+.auth-sheet .wordmark {
+  font-size: 1.25rem;
+}
+
+.auth-sub {
+  color: var(--ink-soft);
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.auth-form input {
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.auth-submit {
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+
+.auth-switch {
+  margin-top: var(--space-5);
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* Responsive -------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .content {
+    padding: var(--space-4);
+  }
+
+  .create-form-row {
+    flex-wrap: wrap;
+  }
+  .create-form-destination {
+    flex-basis: 100%;
+  }
+
+  .ledger thead {
+    display: none;
+  }
+  .ledger,
+  .ledger tbody,
+  .ledger tr,
+  .ledger td {
+    display: block;
+    width: 100%;
+  }
+  .ledger tbody tr {
+    border-bottom: 1px solid var(--line);
+    padding: var(--space-3) var(--space-4);
+  }
+  .ledger tbody tr:last-child {
+    border-bottom: none;
+  }
+  .ledger td {
+    border-bottom: none;
+    padding: var(--space-1) 0;
+    max-width: none;
+    white-space: normal;
+  }
+  .col-code::before {
+    content: "";
+  }
+  .col-actions {
+    text-align: left;
+    padding-top: var(--space-2) !important;
+  }
+  .edit-row td {
+    padding: var(--space-3) var(--space-4);
+  }
+}
