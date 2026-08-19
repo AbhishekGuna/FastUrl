@@ -62,7 +62,11 @@ export function LinkRow({
   return (
     <>
       <tr>
-        <td className="mono col-code">{url.shortCode}</td>
+        <td className="mono col-code">
+          <a href={shortUrl} target="_blank" rel="noopener noreferrer" title="Open link in new tab">
+            {url.shortCode}
+          </a>
+        </td>
         <td className="col-destination" title={url.destination}>
           {url.destination}
         </td>

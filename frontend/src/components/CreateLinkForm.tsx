@@ -9,7 +9,6 @@ export function CreateLinkForm({ onCreated }: { onCreated: (url: CreateUrlRespon
   const [destination, setDestination] = useState("");
   const [alias, setAlias] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
-  const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -37,7 +36,6 @@ export function CreateLinkForm({ onCreated }: { onCreated: (url: CreateUrlRespon
       setDestination("");
       setAlias("");
       setExpiresAt("");
-      setExpanded(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't create the link. Try again.");
     } finally {
@@ -57,44 +55,33 @@ export function CreateLinkForm({ onCreated }: { onCreated: (url: CreateUrlRespon
           aria-label="Destination URL"
           required
         />
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-        >
-          <Icon name="chevron" className={expanded ? "chevron-open" : undefined} />
-          Options
-        </button>
         <button type="submit" className="primary-button" disabled={pending}>
           <Icon name="plus" />
           {pending ? "Adding…" : "Add link"}
         </button>
       </div>
 
-      {expanded && (
-        <div className="create-form-options">
-          <label>
-            Custom alias
-            <input
-              type="text"
-              className="mono"
-              placeholder="optional"
-              value={alias}
-              onChange={(e) => setAlias(e.target.value)}
-              maxLength={16}
-            />
-          </label>
-          <label>
-            Expires
-            <input
-              type="datetime-local"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-            />
-          </label>
-        </div>
-      )}
+      <div className="create-form-options">
+        <label>
+          Custom alias <span>(optional)</span>
+          <input
+            type="text"
+            className="mono"
+            placeholder="optional"
+            value={alias}
+            onChange={(e) => setAlias(e.target.value)}
+            maxLength={16}
+          />
+        </label>
+        <label>
+          Expires <span>(optional)</span>
+          <input
+            type="datetime-local"
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+          />
+        </label>
+      </div>
 
       {error && <p className="form-error">{error}</p>}
     </form>
