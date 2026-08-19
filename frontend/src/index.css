@@ -1,34 +1,45 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Mono&display=swap');
+/* Efferd theme — tweakcn.com/r/themes/cmmi8o8ic000904l12ucn8i9p
+   Geist · Near-monochrome oklch · −0.01em tracking · 0.65rem radius */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Sleek Light Mode with Glassmorphism */
-  --surface-hue: 220;
-  --paper: #f8fafc;
-  --surface: #ffffff;
-  --surface-elevated: rgba(255, 255, 255, 0.7);
-  --surface-hover: rgba(255, 255, 255, 0.9);
-  
-  --ink: #0f172a;
-  --ink-soft: #475569;
-  --ink-faint: #94a3b8;
-  
-  --line: rgba(15, 23, 42, 0.08);
-  --line-strong: rgba(15, 23, 42, 0.15);
-  
-  /* Vibrant Accent: Electric Indigo */
-  --accent: #4f46e5;
-  --accent-strong: #4338ca;
-  --accent-ink: #ffffff;
-  --accent-soft: rgba(79, 70, 229, 0.15);
-  --accent-glow: rgba(79, 70, 229, 0.25);
-  
-  --danger: #ef4444;
-  --danger-soft: rgba(239, 68, 68, 0.15);
-  --warn: #f59e0b;
+  /* ── Light mode ─────────────────────────────────────────────── */
+  --paper:            oklch(0.985 0 0);          /* background     */
+  --surface:          oklch(1 0 0);              /* card           */
+  --surface-elevated: oklch(1 0 0 / 0.88);       /* card + glass   */
+  --surface-hover:    oklch(0.95 0 0);           /* secondary      */
 
-  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'Space Mono', ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --ink:              oklch(0.12 0 0);           /* foreground     */
+  --ink-soft:         oklch(0.556 0 0);          /* muted-fg       */
+  --ink-faint:        oklch(0.72 0 0);           /* placeholder    */
 
+  --line:             oklch(0.9 0 0);            /* border         */
+  --line-strong:      oklch(0.85 0 0);           /* input border   */
+
+  /* Primary = near-black / white swap */
+  --accent:           oklch(0.205 0 0);          /* primary        */
+  --accent-strong:    oklch(0.12 0 0);           /* primary-dark   */
+  --accent-ink:       oklch(0.985 0 0);          /* primary-fg     */
+  --accent-soft:      oklch(0.95 0 0);           /* muted          */
+  --accent-glow:      oklch(0.205 0 0 / 0.15);   /* ring           */
+
+  --danger:           oklch(0.577 0.245 27.325);
+  --danger-soft:      oklch(0.577 0.245 27.325 / 0.12);
+  --warn:             oklch(0.769 0.188 70.08);
+
+  /* ── Typography ─────────────────────────────────────────────── */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  /* Tracking — Efferd ships −0.01em as the normal baseline */
+  --tracking-normal:  -0.01em;
+  --tracking-tight:   calc(var(--tracking-normal) - 0.025em);
+  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+  --tracking-wide:    calc(var(--tracking-normal) + 0.025em);
+  --tracking-wider:   calc(var(--tracking-normal) + 0.05em);
+
+  /* ── Spacing ─────────────────────────────────────────────────── */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -37,14 +48,66 @@
   --space-6: 2rem;
   --space-7: 3rem;
   --space-8: 4rem;
-  
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+
+  /* ── Radii — Efferd: 0.65rem ─────────────────────────────────── */
+  --radius-sm: 0.425rem;    /* ~6.8px  */
+  --radius-md: 0.65rem;     /* ~10.4px */
+  --radius-lg: 1rem;        /* ~16px   */
+  --radius-xl: 1.5rem;      /* ~24px   */
+
+  /* ── Shadows — Efferd light shadow system ────────────────────── */
+  --shadow-xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0px 4px 10px 0px hsl(0 0% 0% / 0.10),
+               0px 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0px 4px 10px 0px hsl(0 0% 0% / 0.10),
+               0px 2px 4px -1px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0px 4px 10px 0px hsl(0 0% 0% / 0.10),
+               0px 4px 6px -1px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.10),
+               0px 8px 10px -1px hsl(0 0% 0% / 0.10);
 
   color-scheme: light;
 }
+
+[data-theme="dark"] {
+  /* ── Dark mode — Efferd dark ─────────────────────────────────── */
+  --paper:            oklch(0.10 0 0);
+  --surface:          oklch(0.16 0 0);
+  --surface-elevated: oklch(0.16 0 0 / 0.88);
+  --surface-hover:    oklch(0.25 0 0);
+
+  --ink:              oklch(0.99 0 0);
+  --ink-soft:         oklch(0.708 0 0);
+  --ink-faint:        oklch(0.50 0 0);
+
+  --line:             oklch(0.34 0 0);
+  --line-strong:      oklch(0.46 0 0);
+
+  --accent:           oklch(0.99 0 0);
+  --accent-strong:    oklch(0.88 0 0);
+  --accent-ink:       oklch(0.16 0 0);
+  --accent-soft:      oklch(0.25 0 0);
+  --accent-glow:      oklch(0.99 0 0 / 0.20);
+
+  --danger:           oklch(0.704 0.191 22.216);
+  --danger-soft:      oklch(0.704 0.191 22.216 / 0.15);
+  --warn:             oklch(0.769 0.188 70.08);
+
+  /* ── Shadows — Efferd dark shadow system ─────────────────────── */
+  --shadow-xs: 0px 10px 20px 0px hsl(0 0% 0% / 0.25);
+  --shadow-sm: 0px 10px 20px 0px hsl(0 0% 0% / 0.50),
+               0px 1px 2px -1px hsl(0 0% 0% / 0.50);
+  --shadow-md: 0px 10px 20px 0px hsl(0 0% 0% / 0.50),
+               0px 2px 4px -1px hsl(0 0% 0% / 0.50);
+  --shadow-lg: 0px 10px 20px 0px hsl(0 0% 0% / 0.50),
+               0px 4px 6px -1px hsl(0 0% 0% / 0.50);
+  --shadow-xl: 0px 10px 20px 0px hsl(0 0% 0% / 0.50),
+               0px 8px 10px -1px hsl(0 0% 0% / 0.50);
+
+  color-scheme: dark;
+}
+
+/* ── Reset & base ────────────────────────────────────────────────── */
 
 * {
   box-sizing: border-box;
@@ -63,6 +126,7 @@ body {
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.5;
+  letter-spacing: var(--tracking-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-variant-numeric: tabular-nums;
@@ -70,33 +134,33 @@ body {
   overflow-x: hidden;
 }
 
-/* Antigravity-style animated background */
-body::before, body::after {
+/* Subtle ambient orbs — restrained for Efferd's near-mono world */
+body::before,
+body::after {
   content: '';
   position: fixed;
   border-radius: 50%;
-  filter: blur(100px);
+  filter: blur(120px);
   z-index: -1;
-  opacity: 0.6;
-  animation: float 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  animation: float 28s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body::before {
-  width: 50vw;
-  height: 50vw;
-  background: rgba(79, 70, 229, 0.15); /* accent color */
-  top: -15vw;
-  left: -15vw;
-  animation-delay: 0s;
+  width: 45vw;
+  height: 45vw;
+  background: oklch(0.60 0.02 250 / 0.07);
+  top: -12vw;
+  left: -10vw;
 }
 
 body::after {
-  width: 40vw;
-  height: 40vw;
-  background: rgba(56, 189, 248, 0.15); /* sky blue */
+  width: 38vw;
+  height: 38vw;
+  background: oklch(0.65 0.015 200 / 0.06);
   bottom: -10vw;
-  right: -10vw;
-  animation-duration: 25s;
+  right: -8vw;
+  animation-duration: 34s;
   animation-direction: alternate-reverse;
 }
 
@@ -109,16 +173,17 @@ input {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
+  letter-spacing: inherit;
 }
 
 a {
   color: var(--accent);
-  transition: color 200ms ease, text-shadow 200ms ease;
+  text-underline-offset: 3px;
+  transition: color 180ms ease, opacity 180ms ease;
 }
 
 a:hover {
-  color: var(--accent-strong);
-  text-shadow: 0 0 12px var(--accent-glow);
+  opacity: 0.72;
 }
 
 ::selection {
@@ -129,21 +194,23 @@ a:hover {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 input:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft), 0 0 15px var(--accent-glow);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
+/* ── Scrollbars ─────────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
 }
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 *::-webkit-scrollbar-thumb {
   background: var(--line-strong);
@@ -153,10 +220,11 @@ input:focus-visible {
   background: transparent;
 }
 
+/* ── Utilities ──────────────────────────────────────────────────── */
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .visually-hidden {
@@ -171,17 +239,23 @@ input:focus-visible {
   border: 0;
 }
 
+/* ── Keyframes ──────────────────────────────────────────────────── */
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 0.75; }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  0%   { transform: translate(0, 0);       }
+  50%  { transform: translate(2%, -3%);    }
+  100% { transform: translate(-1%, 2%);    }
 }
 
 @keyframes slideUpFade {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

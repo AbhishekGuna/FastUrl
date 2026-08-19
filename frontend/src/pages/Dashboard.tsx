@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { CreateLinkForm } from "../components/CreateLinkForm";
 import { LinkRow } from "../components/LinkRow";
 import { Icon } from "../components/Icon";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 const PAGE_SIZE = 20;
 
@@ -62,8 +63,11 @@ export function Dashboard() {
   return (
     <div className="page">
       <header className="topbar">
-        <span className="wordmark">FastUrl</span>
+        <span className="wordmark">
+          FastUrl
+        </span>
         <div className="topbar-right">
+          <ThemeToggle />
           <span className="topbar-email">{user?.email}</span>
           <button type="button" className="ghost-button" onClick={() => void signOut()}>
             Sign out

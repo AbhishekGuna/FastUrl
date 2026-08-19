@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type IconName = "copy" | "check" | "chevron" | "plus" | "close" | "spinner" | "chart";
+type IconName = "copy" | "check" | "chevron" | "plus" | "close" | "spinner" | "chart" | "moon" | "sun" | "link";
 
 const paths: Record<IconName, ReactNode> = {
   copy: (
@@ -28,6 +28,19 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M3 14 7 8l4 3 3-5 3 4" />
       <path d="M3 17h14" />
+    </>
+  ),
+  moon: <path d="M16 12a6 6 0 1 1-8-8 8.1 8.1 0 0 0 8 8Z" />,
+  sun: (
+    <>
+      <circle cx="10" cy="10" r="4" />
+      <path d="M10 2v2M10 16v2M15.66 4.34l-1.42 1.42M5.76 14.24l-1.42 1.42M18 10h-2M4 10H2M15.66 15.66l-1.42-1.42M5.76 5.76 4.34 4.34" />
+    </>
+  ),
+  link: (
+    <>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </>
   ),
 };

@@ -2,8 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -19,6 +22,7 @@ import {
   getAnalyticsTimeSeries,
 } from "../api/client";
 import { Icon } from "../components/Icon";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 const RANGES: { label: string; value: AnalyticsRange }[] = [
   { label: "24 h", value: "24h" },
@@ -49,17 +53,60 @@ function BarList({
     <ul className="bar-list" aria-label={label}>
       {items.map((item) => (
         <li key={`${valueKey}-${item.label}`} className="bar-list-item">
-          <span className="bar-list-label">{item.label}</span>
+          <span className="bar-list-label">{item.label || "Unknown"}</span>
           <div className="bar-list-track">
             <div
               className="bar-list-fill"
-              style={{ width: `${Math.max(2, (item.count / max) * 100)}%` }}
+              style={{ transform: `scaleX(${Math.max(0.02, item.count / max)})` }}
             />
           </div>
           <span className="bar-list-value">{item.count.toLocaleString()}</span>
         </li>
       ))}
     </ul>
+  );
+}
+
+function SimplePieChart({ items }: { items: { label: string; count: number }[] }) {
+  if (items.length === 0) return <p className="analytics-empty">No data yet.</p>;
+  
+  // Clean up data for the pie chart
+  const data = items.map(item => ({
+    name: item.label || "Unknown",
+    value: item.count
+  }));
+
+  const COLORS = ['var(--accent)', 'var(--accent-strong)', 'var(--ink-soft)', 'var(--line-strong)', 'var(--ink-faint)'];
+
+  return (
+    <div className="chart-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart>
+          <Pie
+            data={data}
+            innerRadius={60}
+            outerRadius={80}
+            paddingAngle={2}
+            dataKey="value"
+            stroke="none"
+          >
+            {data.map((_entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{
+              background: "var(--surface-elevated)",
+              border: "1px solid var(--line-strong)",
+              borderRadius: "8px",
+              color: "var(--ink)",
+              fontSize: "13px",
+            }}
+            itemStyle={{ color: "var(--ink)" }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -110,11 +157,21 @@ export function AnalyticsPage() {
             <Icon name="chevron" className="chevron-back" />
             Back
           </button>
-          <span className="wordmark">FastUrl</span>
+          <span className="wordmark">
+            FastUrl
+          </span>
         </div>
         <div className="analytics-page-title">
           <span className="analytics-page-heading">Analytics</span>
-          <span className="analytics-page-code mono">/{shortCode}</span>
+          <span className="analytics-page-code mono">
+            <span className="shortcode-domain">
+              {(import.meta.env.VITE_SHORT_URL_BASE ?? "https://fasturl-redirect-service.onrender.com").replace(/^https?:\/\//, '')}/
+            </span>
+            <span className="shortcode-path">{shortCode}</span>
+          </span>
+        </div>
+        <div className="topbar-right">
+          <ThemeToggle />
         </div>
       </header>
 
@@ -171,8 +228,8 @@ export function AnalyticsPage() {
               ) : (
                 <div className="chart-container">
                   <ResponsiveContainer width="100%" height={260}>
-                    <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
                       <XAxis
                         dataKey="label"
                         tick={{ fill: "var(--ink-faint)", fontSize: 11 }}
@@ -192,18 +249,17 @@ export function AnalyticsPage() {
                           borderRadius: "8px",
                           color: "var(--ink)",
                           fontSize: "13px",
+                          backdropFilter: "blur(12px)",
                         }}
-                        cursor={{ stroke: "var(--accent)", strokeWidth: 1 }}
+                        cursor={{ fill: "var(--line)" }}
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="clicks"
-                        stroke="var(--accent)"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 4, fill: "var(--accent)", stroke: "var(--surface)" }}
+                        fill="var(--line-strong)"
+                        radius={[4, 4, 0, 0]}
+                        activeBar={{ fill: "var(--accent)" }}
                       />
-                    </LineChart>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               )}
@@ -227,20 +283,16 @@ export function AnalyticsPage() {
                   valueKey="country"
                 />
               </div>
-              <div className="analytics-section">
-                <h3 className="analytics-section-title">Operating Systems</h3>
-                <BarList
+              <div className="analytics-section" style={{ alignItems: 'center' }}>
+                <h3 className="analytics-section-title" style={{ alignSelf: 'flex-start' }}>Platform</h3>
+                <SimplePieChart
                   items={summary.topOs.map((r) => ({ label: r.os, count: r.count }))}
-                  label="Top operating systems"
-                  valueKey="os"
                 />
               </div>
-              <div className="analytics-section">
-                <h3 className="analytics-section-title">Browsers</h3>
-                <BarList
+              <div className="analytics-section" style={{ alignItems: 'center' }}>
+                <h3 className="analytics-section-title" style={{ alignSelf: 'flex-start' }}>Connect Method</h3>
+                <SimplePieChart
                   items={summary.topBrowsers.map((r) => ({ label: r.browser, count: r.count }))}
-                  label="Top browsers"
-                  valueKey="browser"
                 />
               </div>
             </div>

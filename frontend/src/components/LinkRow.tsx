@@ -9,7 +9,7 @@ import { CopyButton } from "./CopyButton";
 import { displayStatus, StatusLabel } from "./StatusLabel";
 import { Icon } from "./Icon";
 
-const SHORT_URL_BASE = import.meta.env.VITE_SHORT_URL_BASE ?? "http://localhost:3000";
+const SHORT_URL_BASE = import.meta.env.VITE_SHORT_URL_BASE ?? "https://fasturl-redirect-service.onrender.com";
 
 export function LinkRow({
   url,
@@ -65,8 +65,9 @@ export function LinkRow({
     <>
       <tr>
         <td className="mono col-code">
-          <a href={shortUrl} target="_blank" rel="noopener noreferrer" title="Open link in new tab">
-            {url.shortCode}
+          <a href={shortUrl} target="_blank" rel="noopener noreferrer" title="Open link in new tab" className="shortcode-container">
+            <span className="shortcode-domain">{SHORT_URL_BASE.replace(/^https?:\/\//, '')}/</span>
+            <span className="shortcode-path">{url.shortCode}</span>
           </a>
         </td>
         <td className="col-destination" title={url.destination}>
