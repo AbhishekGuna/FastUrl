@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type IconName = "copy" | "check" | "chevron" | "plus" | "close" | "spinner";
+type IconName = "copy" | "check" | "chevron" | "plus" | "close" | "spinner" | "chart";
 
 const paths: Record<IconName, ReactNode> = {
   copy: (
@@ -24,6 +24,12 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   spinner: <path d="M10 3.5a6.5 6.5 0 1 0 6.5 6.5" />,
+  chart: (
+    <>
+      <path d="M3 14 7 8l4 3 3-5 3 4" />
+      <path d="M3 17h14" />
+    </>
+  ),
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

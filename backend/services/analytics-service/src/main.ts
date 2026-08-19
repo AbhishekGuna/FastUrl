@@ -1,24 +1,22 @@
 import Fastify, { type FastifyError } from "fastify";
+import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import { Redis } from "ioredis";
 import { config } from "./config/index.js";
 import { pool } from "./infrastructure/postgres/pool.js";
-import { PostgresUrlRepository } from "./infrastructure/postgres/PostgresUrlRepository.js";
-import { RedisCache } from "./infrastructure/redis/RedisCache.js";
-import { RedisEventPublisher } from "./infrastructure/redis/RedisEventPublisher.js";
-import { ResolveShortCode } from "./application/ResolveShortCode.js";
-import { registerRedirectRoutes } from "./interfaces/http/routes/redirect.routes.js";
+import { ensureAnalyticsSchema } from "./infrastructure/postgres/ensureSchema.js";
+import { startClickConsumer } from "./workers/clickConsumer.js";
 
 async function main() {
   const app = Fastify({ logger: true });
 
+  // Ensure url_clicks table and indexes exist
+  await ensureAnalyticsSchema(pool);
+
   const redis = new Redis(config.redisUrl);
-  const urlRepository = new PostgresUrlRepository(pool);
-  const cache = new RedisCache(redis);
-  const eventPublisher = new RedisEventPublisher(redis);
-  const resolveShortCode = new ResolveShortCode(cache, urlRepository);
 
   await app.register(helmet);
+  await app.register(cors, { origin: config.corsOrigins });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     const statusCode = error.statusCode ?? 500;
@@ -31,9 +29,13 @@ async function main() {
 
   app.get("/healthz", async () => ({ status: "ok" }));
 
-  registerRedirectRoutes(app, resolveShortCode, eventPublisher);
-
   await app.listen({ port: config.port, host: "0.0.0.0" });
+
+  // Start the stream consumer in the background after server is up
+  startClickConsumer(redis, pool, app.log).catch((err) => {
+    app.log.fatal({ err }, "Click consumer crashed — exiting");
+    process.exit(1);
+  });
 }
 
 main().catch((err) => {

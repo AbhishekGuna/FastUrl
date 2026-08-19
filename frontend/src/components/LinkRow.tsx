@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { ApiError, updateUrl } from "../api/client";
+import { useNavigate } from "react-router-dom";
+import { ApiError, updateUrl, deleteUrl } from "../api/client";
 import type { ShortUrl } from "../api/types";
 import { formatDate, formatRelative } from "../lib/format";
 import { isValidDestination } from "../lib/validate";
@@ -17,6 +18,7 @@ export function LinkRow({
   url: ShortUrl;
   onUpdated: (url: ShortUrl) => void;
 }) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [destination, setDestination] = useState(url.destination);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +83,14 @@ export function LinkRow({
           <button
             type="button"
             className="row-action"
+            onClick={() => navigate(`/analytics/${url.shortCode}`)}
+            title="View analytics"
+          >
+            <Icon name="chart" />
+          </button>
+          <button
+            type="button"
+            className="row-action"
             onClick={() => {
               setEditing((v) => !v);
               setError(null);
@@ -122,6 +132,7 @@ export function LinkRow({
           </td>
         </tr>
       )}
+
     </>
   );
 }

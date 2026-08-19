@@ -65,3 +65,27 @@ services:
           property: connectionString
       - key: URL_CACHE_TTL_SECONDS
         value: "3600"
+
+  - type: pserv
+    name: fasturl-analytics-service
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./services/analytics-service/Dockerfile
+    dockerContext: .
+    branch: main
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fasturl-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: fasturl-redis
+          property: connectionString
+      - key: CORS_ORIGINS
+        sync: false

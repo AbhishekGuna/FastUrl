@@ -107,3 +107,32 @@ export async function updateUrl(shortCode: string, patch: UpdateUrlInput): Promi
 export async function deleteUrl(shortCode: string): Promise<void> {
   await request(`/api/v1/urls/${encodeURIComponent(shortCode)}`, { method: "DELETE" });
 }
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+export interface AnalyticsSummary {
+  totalClicks: number;
+  topReferrers: { referrer: string; count: number }[];
+  topOs: { os: string; count: number }[];
+  topBrowsers: { browser: string; count: number }[];
+  topDeviceTypes: { deviceType: string; count: number }[];
+  topCountries: { country: string; count: number }[];
+}
+
+export interface TimeSeriesPoint {
+  bucket: string;
+  clicks: number;
+}
+
+export type AnalyticsRange = "24h" | "7d" | "30d";
+
+export async function getAnalyticsSummary(shortCode: string): Promise<AnalyticsSummary> {
+  return request(`/api/v1/urls/${encodeURIComponent(shortCode)}/analytics/summary`);
+}
+
+export async function getAnalyticsTimeSeries(
+  shortCode: string,
+  range: AnalyticsRange
+): Promise<TimeSeriesPoint[]> {
+  return request(`/api/v1/urls/${encodeURIComponent(shortCode)}/analytics/timeseries?range=${range}`);
+}

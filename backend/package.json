@@ -8,6 +8,7 @@
   "scripts": {
     "dev:url-management": "npm run dev -w services/url-management-service",
     "dev:redirect": "npm run dev -w services/redirect-service",
+    "dev:analytics": "npm run dev -w services/analytics-service",
     "build": "npm run build --workspaces --if-present",
     "loadtest": "node scripts/loadtest.mjs"
   },

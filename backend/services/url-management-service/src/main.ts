@@ -2,11 +2,13 @@ import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import { Pool } from "pg";
 import { Redis } from "ioredis";
 import { config } from "./config/index.js";
 import { authRoutes } from "./interfaces/http/routes/auth.routes.js";
 import { meRoutes } from "./interfaces/http/routes/me.routes.js";
 import { registerUrlRoutes } from "./interfaces/http/routes/url.routes.js";
+import { registerAnalyticsRoutes } from "./interfaces/http/routes/analytics.routes.js";
 import { pool } from "./infrastructure/postgres/pool.js";
 import { ensureUrlsTable } from "./infrastructure/postgres/ensureSchema.js";
 import { PostgresUrlRepository } from "./infrastructure/postgres/PostgresUrlRepository.js";
@@ -21,6 +23,8 @@ async function main() {
   const app = Fastify({ logger: true });
 
   await ensureUrlsTable(pool);
+
+  const analyticsPool = new Pool({ connectionString: config.databaseUrl });
 
   const redis = new Redis(config.redisUrl);
   const urlRepository = new PostgresUrlRepository(pool);
@@ -54,6 +58,7 @@ async function main() {
   await app.register(authRoutes);
   await app.register(meRoutes);
   registerUrlRoutes(app, urlDeps);
+  registerAnalyticsRoutes(app, analyticsPool, pool);
 
   await app.listen({ port: config.port, host: "0.0.0.0" });
 }
