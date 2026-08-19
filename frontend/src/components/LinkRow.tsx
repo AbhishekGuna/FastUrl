@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ApiError, updateUrl, deleteUrl } from "../api/client";
+import { ApiError, updateUrl } from "../api/client";
 import type { ShortUrl } from "../api/types";
 import { formatDate, formatRelative } from "../lib/format";
 import { isValidDestination } from "../lib/validate";
