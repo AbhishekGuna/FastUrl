@@ -138,7 +138,7 @@ The analytics routes run **parallel aggregations** via `Promise.all`:
 - Top 10 operating systems
 - Top 10 browsers
 - Device type breakdown
-- Top 10 countries
+- Top 10 countries (resolved from click IP via `geoip-lite`)
 
 Time-series queries use PostgreSQL's `date_trunc()` to bucket clicks into hours (24h range) or days (7d / 30d range).
 
@@ -249,7 +249,7 @@ Key behaviours:
 - **Consumer Group**: uses Redis Consumer Groups so multiple instances of the analytics service can run concurrently without double-processing
 - **Crash recovery via `XAUTOCLAIM`**: at the start of each loop iteration, the worker claims any messages that have been pending (unacknowledged) for > 60 seconds. This ensures no click event is lost even if the process restarts mid-batch
 - **Batch INSERT**: a single parameterised `INSERT INTO url_clicks (…) VALUES ($1,…), ($9,…)` statement is constructed for the entire batch, reducing PostgreSQL round-trips and transaction overhead
-- **`ua-parser-js` parsing**: each raw `userAgent` string is parsed into structured `os`, `browser`, and `deviceType` fields before insertion
+- **`ua-parser-js` + `geoip-lite` enrichment**: each raw event is enriched with structured `os`, `browser`, `deviceType`, and `country` fields before insertion. `geoip-lite` uses a bundled GeoIP database for synchronous, offline IP→ISO 3166-1 alpha-2 lookups — no external API calls, no MaxMind license required. Private/loopback IPs resolve to an empty string.
 - **Error isolation**: errors in the consumer loop are caught, logged, and the loop retries after a 2-second delay — the process does not exit on transient failures
 
 ---
@@ -334,7 +334,7 @@ CREATE INDEX idx_clicks_device        ON url_clicks (short_code, device_type);
 
 2. **Eventual consistency in analytics.** Because clicks are processed asynchronously, there is a brief window (the worker's poll interval) between a click occurring and it appearing on the creator's dashboard.
 
-3. **No geo-IP resolution.** The `country` column exists in the schema but the analytics worker does not currently populate it (the `ip` field is stored but no MaxMind GeoIP lookup is performed).
+3. **Geo-IP accuracy is bounded by the bundled database.** `geoip-lite` ships a stripped-down MaxMind database that is updated periodically (via `npm update`). Country resolution is best-effort: accuracy is ~95% for IPv4 at the country level, IPv6 coverage is narrower, and private/loopback IPs (e.g. during local development) resolve to `''`. For higher accuracy or city-level resolution, replace with a live MaxMind GeoIP2 API call or a self-hosted mmdb file.
 
 4. **Single Redis instance is a SPOF.** Both the URL cache and the click event stream depend on the same Redis. Redis Sentinel or Cluster would be needed for high availability in production.
 

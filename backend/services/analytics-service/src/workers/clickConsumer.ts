@@ -1,4 +1,5 @@
 import { UAParser } from "ua-parser-js";
+import geoip from "geoip-lite";
 import type { Pool } from "pg";
 import type { Redis } from "ioredis";
 import { config } from "../config/index.js";
@@ -61,6 +62,17 @@ function parseUserAgent(ua: string) {
   return { os, browser, deviceType };
 }
 
+/**
+ * Resolves an IPv4/IPv6 address to an ISO 3166-1 alpha-2 country code.
+ * Uses the bundled geoip-lite database — no external API calls, no license required.
+ * Returns an empty string for private/loopback IPs or unknown addresses.
+ */
+function lookupCountry(ip: string): string {
+  if (!ip) return "";
+  const geo = geoip.lookup(ip);
+  return geo?.country ?? "";
+}
+
 async function processBatch(entries: RawStreamEntry[], pool: Pool): Promise<void> {
   if (entries.length === 0) return;
 
@@ -68,23 +80,25 @@ async function processBatch(entries: RawStreamEntry[], pool: Pool): Promise<void
   const values: unknown[] = [];
   const placeholders = entries.map((e, idx) => {
     const { os, browser, deviceType } = parseUserAgent(e.userAgent);
-    const base = idx * 8;
+    const country = lookupCountry(e.ip);
+    const base = idx * 9;
     values.push(
       e.shortCode,
       e.timestamp,
       e.ip,
       e.userAgent,
       e.referrer,
+      country,
       os,
       browser,
       deviceType
     );
-    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8})`;
+    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9})`;
   });
 
   await pool.query(
     `INSERT INTO url_clicks
-       (short_code, clicked_at, ip, user_agent, referrer, os, browser, device_type)
+       (short_code, clicked_at, ip, user_agent, referrer, country, os, browser, device_type)
      VALUES ${placeholders.join(", ")}`,
     values
   );
