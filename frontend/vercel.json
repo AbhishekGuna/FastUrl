@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/(dashboard|analytics|login|signup|settings|__vite.*|assets/.*|.*\\..*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:shortCode",
+      "destination": "https://fasturl-redirect-service.onrender.com/:shortCode"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

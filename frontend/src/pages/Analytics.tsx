@@ -165,7 +165,7 @@ export function AnalyticsPage() {
           <span className="analytics-page-heading">Analytics</span>
           <span className="analytics-page-code mono">
             <span className="shortcode-domain">
-              {(import.meta.env.VITE_SHORT_URL_BASE ?? "https://fasturl-redirect-service.onrender.com").replace(/^https?:\/\//, '')}/
+              {(import.meta.env.VITE_SHORT_URL_BASE ?? window.location.origin).replace(/^https?:\/\//, '')}/
             </span>
             <span className="shortcode-path">{shortCode}</span>
           </span>

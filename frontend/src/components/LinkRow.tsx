@@ -9,7 +9,7 @@ import { CopyButton } from "./CopyButton";
 import { displayStatus, StatusLabel } from "./StatusLabel";
 import { Icon } from "./Icon";
 
-const SHORT_URL_BASE = import.meta.env.VITE_SHORT_URL_BASE ?? "https://fasturl-redirect-service.onrender.com";
+const SHORT_URL_BASE = import.meta.env.VITE_SHORT_URL_BASE ?? window.location.origin;
 
 export function LinkRow({
   url,
