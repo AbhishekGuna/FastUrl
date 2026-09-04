@@ -71,14 +71,14 @@ describe("ResolveShortCode", () => {
     expect(result).toEqual({ outcome: "found", url });
   });
 
-  it("treats a disabled URL as not_found", async () => {
+  it("returns disabled for a DISABLED URL", async () => {
     const url = makeUrl({ status: "DISABLED" });
     const repository = makeRepository(new Map([[url.shortCode, url]]));
     const resolve = new ResolveShortCode(makeCache(), repository);
 
     const result = await resolve.execute(url.shortCode);
 
-    expect(result.outcome).toBe("not_found");
+    expect(result.outcome).toBe("disabled");
   });
 
   it("returns expired for a URL past its expiresAt", async () => {

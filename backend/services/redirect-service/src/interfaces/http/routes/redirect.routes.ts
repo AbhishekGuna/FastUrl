@@ -13,6 +13,7 @@ export function registerRedirectRoutes(
     const result = await resolveShortCode.execute(shortCode);
 
     if (result.outcome === "not_found") return reply.code(404).send();
+    if (result.outcome === "disabled") return reply.code(410).send();
     if (result.outcome === "expired") return reply.code(410).send();
 
     // Send the redirect immediately — analytics is fire-and-forget

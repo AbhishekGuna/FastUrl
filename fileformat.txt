@@ -1,0 +1,137 @@
+backend/
+│
+├── README.md
+├── docker-compose.yml
+├── package.json
+├── package-lock.json
+├── tsconfig.base.json
+│
+├── scripts/
+│   └── loadtest.mjs
+│
+├── services/
+│   │
+│   ├── url-management/
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── README.md
+│   │   │
+│   │   └── src/
+│   │       ├── main.ts
+│   │       │
+│   │       ├── config/
+│   │       │   └── index.ts
+│   │       │
+│   │       ├── domain/
+│   │       │   ├── Url.ts
+│   │       │   ├── UrlRepository.ts
+│   │       │   └── services/
+│   │       │       ├── base62.ts
+│   │       │       └── validateDestination.ts
+│   │       │
+│   │       ├── application/
+│   │       │   ├── CreateUrl.ts
+│   │       │   ├── DeleteUrl.ts
+│   │       │   ├── GetUrl.ts
+│   │       │   ├── ListUrls.ts
+│   │       │   └── UpdateUrl.ts
+│   │       │
+│   │       ├── infrastructure/
+│   │       │   ├── postgres/
+│   │       │   │   ├── PostgresUrlRepository.ts
+│   │       │   │   ├── pool.ts
+│   │       │   │   └── migrations/
+│   │       │   │
+│   │       │   ├── redis/
+│   │       │   │   └── RedisCache.ts
+│   │       │   │
+│   │       │   └── auth/
+│   │       │       └── auth.ts
+│   │       │
+│   │       └── interfaces/
+│   │           └── http/
+│   │               ├── routes/
+│   │               │   ├── url.routes.ts
+│   │               │   ├── auth.routes.ts
+│   │               │   ├── me.routes.ts
+│   │               │   └── analytics.routes.ts
+│   │               │
+│   │               └── middleware/
+│   │                   ├── auth.middleware.ts
+│   │                   └── rateLimit.middleware.ts
+│   │
+│   ├── redirect/
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── README.md
+│   │   │
+│   │   └── src/
+│   │       ├── main.ts
+│   │       ├── config/
+│   │       │   └── index.ts
+│   │       │
+│   │       ├── domain/
+│   │       │   ├── Url.ts
+│   │       │   └── UrlRepository.ts
+│   │       │
+│   │       ├── application/
+│   │       │   └── ResolveShortCode.ts
+│   │       │
+│   │       ├── infrastructure/
+│   │       │   ├── postgres/
+│   │       │   │   ├── PostgresUrlRepository.ts
+│   │       │   │   └── pool.ts
+│   │       │   │
+│   │       │   └── redis/
+│   │       │       ├── RedisCache.ts
+│   │       │       └── RedisEventPublisher.ts
+│   │       │
+│   │       └── interfaces/
+│   │           └── http/
+│   │               └── redirect.routes.ts
+│   │
+│   └── analytics/
+│       ├── Dockerfile
+│       ├── package.json
+│       ├── tsconfig.json
+│       ├── README.md
+│       │
+│       └── src/
+│           ├── main.ts
+│           ├── config/
+│           │   └── index.ts
+│           │
+│           ├── domain/
+│           │   └── Analytics.ts
+│           │
+│           ├── application/
+│           │   └── RecordClick.ts
+│           │
+│           ├── infrastructure/
+│           │   ├── postgres/
+│           │   │   ├── AnalyticsRepository.ts
+│           │   │   └── pool.ts
+│           │   │
+│           │   └── messaging/
+│           │       └── clickConsumer.ts
+│           │
+│           └── interfaces/
+│
+├── shared/
+│   ├── events/
+│   │   ├── ClickEvent.ts
+│   │   └── UrlEvent.ts
+│   │
+│   ├── types/
+│   │   └── ...
+│   │
+│   └── constants/
+│       └── ...
+│
+└── docs/
+    ├── architecture.md
+    ├── api.md
+    ├── events.md
+    └── database.md

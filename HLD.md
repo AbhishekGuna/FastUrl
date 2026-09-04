@@ -85,7 +85,7 @@ src/
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | `POST/GET` | `/api/auth/*` | — | Proxied to `better-auth` handler; stricter 10 req/min rate limit |
-| `GET` | `/me` | ✓ | Returns current user identity |
+| `GET` | `/api/me` | ✓ | Returns current user identity |
 | `POST` | `/api/v1/urls` | ✓ | Create URL; **30 req/min per user** (Redis INCR counter) |
 | `GET` | `/api/v1/urls` | ✓ | List URLs (pagination via `limit` / `offset`) |
 | `GET` | `/api/v1/urls/:shortCode` | ✓ | Fetch single URL (ownership enforced) |

@@ -6,6 +6,7 @@ import { config } from "../config/index.js";
 export type ResolveResult =
   | { outcome: "found"; url: Url }
   | { outcome: "not_found" }
+  | { outcome: "disabled" }
   | { outcome: "expired" };
 
 export class ResolveShortCode {
@@ -24,7 +25,7 @@ export class ResolveShortCode {
       await this.cache.set(cacheKey, url, config.urlCacheTtlSeconds);
     }
 
-    if (url.status !== "ACTIVE") return { outcome: "not_found" };
+    if (url.status !== "ACTIVE") return { outcome: "disabled" };
     if (url.expiresAt && new Date(url.expiresAt).getTime() < Date.now()) {
       return { outcome: "expired" };
     }
