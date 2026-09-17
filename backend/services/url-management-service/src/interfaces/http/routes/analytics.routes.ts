@@ -21,16 +21,13 @@ const RANGE_CONFIG: Record<string, { interval: string; trunc: string }> = {
     '7d': { interval: '7 days', trunc: 'day' },
     '30d': { interval: '30 days', trunc: 'day' },
 };
+import type { GetUrl } from '../../../application/GetUrl.js';
 
-async function assertOwnership(pool: Pool, shortCode: string, userId: string): Promise<boolean> {
-    const { rows } = await pool.query(`SELECT 1 FROM urls WHERE short_code = $1 AND user_id = $2`, [
-        shortCode,
-        userId,
-    ]);
-    return rows.length > 0;
+export interface AnalyticsDeps {
+    getUrl: GetUrl;
 }
 
-export function registerAnalyticsRoutes(app: FastifyInstance, analyticsPool: Pool, urlPool: Pool) {
+export function registerAnalyticsRoutes(app: FastifyInstance, analyticsPool: Pool, deps: AnalyticsDeps) {
     /**
      * GET /api/v1/urls/:shortCode/analytics/summary
      * Returns aggregated breakdown: total clicks, top referrers, OS, browser, device, country.
@@ -41,9 +38,10 @@ export function registerAnalyticsRoutes(app: FastifyInstance, analyticsPool: Poo
         async (request, reply) => {
             const { shortCode } = request.params as { shortCode: string };
             const userId = request.user?.id;
+            if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
-            const owns = await assertOwnership(urlPool, shortCode, userId);
-            if (!owns) return reply.code(404).send({ error: 'Not found' });
+            const url = await deps.getUrl.execute(shortCode, userId);
+            if (!url) return reply.code(404).send({ error: 'Not found' });
 
             const [totalResult, referrers, os, browsers, devices, countries] = await Promise.all([
                 analyticsPool.query<{ total: string }>(
@@ -118,9 +116,10 @@ export function registerAnalyticsRoutes(app: FastifyInstance, analyticsPool: Poo
             const { shortCode } = request.params as { shortCode: string };
             const { range = '7d' } = request.query as { range?: string };
             const userId = request.user?.id;
+            if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
-            const owns = await assertOwnership(urlPool, shortCode, userId);
-            if (!owns) return reply.code(404).send({ error: 'Not found' });
+            const url = await deps.getUrl.execute(shortCode, userId);
+            if (!url) return reply.code(404).send({ error: 'Not found' });
 
             const { interval, trunc } = RANGE_CONFIG[range] ?? RANGE_CONFIG['7d'];
 

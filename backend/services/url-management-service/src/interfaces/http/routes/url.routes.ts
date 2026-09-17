@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Redis } from 'ioredis';
 import type { CreateUrl } from '../../../application/CreateUrl.js';
-import type { DeleteUrl } from '../../../application/DeleteUrl.js';
 import type { GetUrl } from '../../../application/GetUrl.js';
 import type { ListUrls } from '../../../application/ListUrls.js';
 import type { UpdateUrl } from '../../../application/UpdateUrl.js';
@@ -14,7 +13,6 @@ interface Deps {
     createUrl: CreateUrl;
     getUrl: GetUrl;
     updateUrl: UpdateUrl;
-    deleteUrl: DeleteUrl;
     listUrls: ListUrls;
     redis: Redis;
 }
@@ -46,6 +44,7 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
         { preHandler: [requireAuth, createRateLimit] },
         async (request, reply) => {
             const userId = request.user?.id;
+            if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
             const body = request.body as {
                 destination: string;
                 customAlias?: string;
@@ -66,8 +65,9 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
         },
     );
 
-    app.get('/api/v1/urls', { preHandler: requireAuth }, async (request) => {
+    app.get('/api/v1/urls', { preHandler: requireAuth }, async (request, reply) => {
         const userId = request.user?.id;
+        if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
         const { limit, offset } = request.query as { limit?: string; offset?: string };
         return deps.listUrls.execute(
             userId,
@@ -78,7 +78,9 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
 
     app.get('/api/v1/urls/:shortCode', { preHandler: requireAuth }, async (request, reply) => {
         const { shortCode } = request.params as { shortCode: string };
-        const url = await deps.getUrl.execute(shortCode, request.user?.id);
+        const userId = request.user?.id;
+        if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
+        const url = await deps.getUrl.execute(shortCode, userId);
         if (!url) return reply.code(404).send();
         return url;
     });
@@ -95,10 +97,13 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
             return reply.code(400).send({ error: 'INVALID_STATUS' });
         }
 
+        const userId = request.user?.id;
+        if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
+
         try {
             const url = await deps.updateUrl.execute(
                 shortCode,
-                request.user?.id,
+                userId,
                 patch as { destination?: string; status?: UrlStatus; expiresAt?: string | null },
             );
             if (!url) return reply.code(404).send();
@@ -110,8 +115,10 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
 
     app.delete('/api/v1/urls/:shortCode', { preHandler: requireAuth }, async (request, reply) => {
         const { shortCode } = request.params as { shortCode: string };
-        const deleted = await deps.deleteUrl.execute(shortCode, request.user?.id);
-        if (!deleted) return reply.code(404).send();
+        const userId = request.user?.id;
+        if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
+        const updated = await deps.updateUrl.execute(shortCode, userId, { status: 'DISABLED' });
+        if (!updated) return reply.code(404).send();
         return reply.code(204).send();
     });
 }

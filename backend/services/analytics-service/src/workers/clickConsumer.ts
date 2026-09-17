@@ -109,6 +109,7 @@ export async function startClickConsumer(
     logger: {
         info: (meta: unknown, msg?: string) => void;
         error: (meta: unknown, msg?: string) => void;
+        debug: (meta: unknown, msg?: string) => void;
     },
 ): Promise<void> {
     await ensureConsumerGroup(redis);
@@ -161,7 +162,8 @@ export async function startClickConsumer(
 
             if (!response) continue; // timeout — no new messages
 
-            const [, messages] = response[0] as [string, [string, string[]][]];
+            const respArray = response as [string, [string, string[]][]][];
+            const [, messages] = respArray[0];
             const entries = messages.map(([id, fields]) => parseStreamEntry(id, fields));
 
             await processBatch(entries, pool);

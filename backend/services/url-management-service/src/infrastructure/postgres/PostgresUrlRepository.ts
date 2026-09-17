@@ -80,7 +80,7 @@ function mapRow(row: UrlRow): Url {
         userId: String(row.user_id),
         destination: row.destination,
         status: row.status,
-        redirectType: row.redirect_type,
+        redirectType: row.redirect_type as Url['redirectType'],
         createdAt: row.created_at.toISOString(),
         expiresAt: row.expires_at ? row.expires_at.toISOString() : null,
         clickCount: Number(row.click_count),

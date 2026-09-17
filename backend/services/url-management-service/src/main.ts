@@ -5,7 +5,6 @@ import Fastify, { type FastifyError } from 'fastify';
 import { Redis } from 'ioredis';
 import { Pool } from 'pg';
 import { CreateUrl } from './application/CreateUrl.js';
-import { DeleteUrl } from './application/DeleteUrl.js';
 import { GetUrl } from './application/GetUrl.js';
 import { ListUrls } from './application/ListUrls.js';
 import { UpdateUrl } from './application/UpdateUrl.js';
@@ -48,7 +47,6 @@ async function main() {
         createUrl: new CreateUrl(urlRepository, cache),
         getUrl: new GetUrl(urlRepository),
         updateUrl: new UpdateUrl(urlRepository, cache),
-        deleteUrl: new DeleteUrl(urlRepository, cache),
         listUrls: new ListUrls(urlRepository),
         redis,
     };
@@ -58,7 +56,7 @@ async function main() {
     await app.register(authRoutes);
     await app.register(meRoutes);
     registerUrlRoutes(app, urlDeps);
-    registerAnalyticsRoutes(app, analyticsPool, pool);
+    registerAnalyticsRoutes(app, analyticsPool, urlDeps);
 
     await app.listen({ port: config.port, host: '0.0.0.0' });
 }
