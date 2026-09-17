@@ -6,13 +6,12 @@ This document describes the high-level architecture and key design decisions for
 
 ## 1. System Overview
 
-The backend is split into **three independent Node.js services**, each with a distinct responsibility. They share a single PostgreSQL database and a single Redis instance but are deployed and scaled independently.
+The backend is split into **two independent Node.js services**, each with a distinct responsibility. They share a single PostgreSQL database and a single Redis instance but are deployed and scaled independently.
 
 | Service | Package name | Primary role |
 |---|---|---|
-| `url-management-service` | `@fasturl/url-management-service` | REST API — CRUD, auth, analytics read-path |
+| `url-management-service` | `@fasturl/url-management-service` | REST API — CRUD, auth, analytics read-path, and background click processing |
 | `redirect-service` | `@fasturl/redirect-service` | Ultra-low-latency URL resolution & click publishing |
-| `analytics-service` | `@fasturl/analytics-service` | Background worker — click event processing |
 
 ---
 
@@ -25,7 +24,6 @@ graph TD
     subgraph Backend Services
         UMS["url-management-service\n(Fastify · port 3001)"]
         RS["redirect-service\n(Fastify · port 3002)"]
-        AS["analytics-service\n(Fastify + worker · port 3003)"]
     end
 
     subgraph Data Layer
@@ -46,9 +44,9 @@ graph TD
     RS -->|"Cache-miss fallback SELECT"| PG
     RS -->|"XADD url.clicks.stream\n(fire-and-forget)"| Redis
 
-    Redis -->|"XREADGROUP (blocking poll)"| AS
-    AS -->|"Bulk INSERT url_clicks"| PG
-    AS -->|"XACK"| Redis
+    Redis -->|"XREADGROUP (blocking poll)"| UMS
+    UMS -->|"Bulk INSERT url_clicks"| PG
+    UMS -->|"XACK"| Redis
 ```
 
 ---
@@ -57,27 +55,23 @@ graph TD
 
 ### 3.1 `url-management-service`
 
-**Responsibility:** The primary API consumed by the frontend. Handles all URL lifecycle operations, user authentication, and serves aggregated analytics data.
+**Responsibility:** The primary API consumed by the frontend. Handles all URL lifecycle operations, user authentication, serves aggregated analytics data, and runs a background worker to process click events.
 
-#### Internal Architecture (Clean Architecture)
+#### Internal Architecture
 
-Each service follows a layered architecture that mirrors Clean Architecture / Hexagonal principles:
+The service follows a pragmatic, flattened structure that separates concerns without excessive boilerplate:
 
 ```
 src/
-├── application/       ← Use-case classes (CreateUrl, GetUrl, UpdateUrl, DeleteUrl, ListUrls)
-├── domain/
-│   ├── entities/      ← Url entity + types (UrlStatus, RedirectType)
-│   ├── interfaces/    ← UrlRepository, Cache (abstractions)
-│   └── services/      ← base62 encoder, validateDestination (pure domain logic)
-├── infrastructure/
-│   ├── postgres/      ← PostgresUrlRepository, ensureSchema, connection pool
-│   ├── redis/         ← RedisCache (get/set/delete wrapper over ioredis)
-│   └── auth/          ← better-auth setup (email+password + bearer plugin)
-└── interfaces/
-    └── http/
-        ├── middleware/ ← requireAuth, per-user create-URL rate limiter
-        └── routes/    ← url.routes.ts, auth.routes.ts, me.routes.ts, analytics.routes.ts
+├── config.ts
+├── db/            ← PostgresUrlRepository, ensureSchema, pool.ts
+├── middleware/    ← auth.middleware.ts, rateLimit.middleware.ts
+├── redis/         ← RedisCache
+├── routes/        ← url.routes.ts, auth.routes.ts, me.routes.ts, analytics.routes.ts
+├── services/      ← CreateUrl, GetUrl, UpdateUrl, ListUrls, auth.ts
+├── types.ts       ← interfaces for Cache, UrlRepository
+├── utils/         ← base62 encoder, validateDestination
+└── workers/       ← clickConsumer.ts
 ```
 
 #### REST API Surface
@@ -142,6 +136,41 @@ The analytics routes run **parallel aggregations** via `Promise.all`:
 
 Time-series queries use PostgreSQL's `date_trunc()` to bucket clicks into hours (24h range) or days (7d / 30d range).
 
+#### Background Analytics Worker (clickConsumer)
+
+A long-running background worker runs within this service, draining the `url.clicks.stream` Redis Stream, parsing user agents, and bulk-inserting events into `url_clicks`.
+
+```mermaid
+sequenceDiagram
+    participant W as Analytics Worker (UMS)
+    participant Redis
+    participant PG as PostgreSQL
+
+    W->>Redis: XCREATEGROUP url.clicks.stream (idempotent)
+    loop Every poll cycle
+        W->>Redis: XAUTOCLAIM (reclaim pending > 60s old)
+        alt Has stale pending messages
+            W->>PG: Bulk INSERT url_clicks
+            W->>Redis: XACK (stale ids)
+        end
+        W->>Redis: XREADGROUP GROUP … BLOCK {pollIntervalMs} STREAMS url.clicks.stream >
+        alt Messages received
+            W->>W: parseUserAgent() via ua-parser-js
+            W->>PG: Bulk INSERT url_clicks (multi-row VALUES)
+            W->>Redis: XACK (ids)
+        else Timeout (no new messages)
+            W->>W: continue loop
+        end
+    end
+```
+
+Key behaviours:
+- **Consumer Group**: uses Redis Consumer Groups so multiple instances of the service can run concurrently without double-processing
+- **Crash recovery via `XAUTOCLAIM`**: at the start of each loop iteration, the worker claims any messages that have been pending (unacknowledged) for > 60 seconds. This ensures no click event is lost even if the process restarts mid-batch
+- **Batch INSERT**: a single parameterised `INSERT INTO url_clicks (…) VALUES ($1,…), ($9,…)` statement is constructed for the entire batch, reducing PostgreSQL round-trips and transaction overhead
+- **`ua-parser-js` + `geoip-lite` enrichment**: each raw event is enriched with structured `os`, `browser`, `deviceType`, and `country` fields before insertion. `geoip-lite` uses a bundled GeoIP database for synchronous, offline IP→ISO 3166-1 alpha-2 lookups — no external API calls, no MaxMind license required. Private/loopback IPs resolve to an empty string.
+- **Error isolation**: errors in the consumer loop are caught, logged, and the loop retries after a 2-second delay — the process does not exit on transient failures
+
 ---
 
 ### 3.2 `redirect-service`
@@ -152,17 +181,12 @@ Time-series queries use PostgreSQL's `date_trunc()` to bucket clicks into hours 
 
 ```
 src/
-├── application/   ← ResolveShortCode use case
-├── domain/
-│   ├── entities/  ← Url entity
-│   └── interfaces/← Cache, UrlRepository, EventPublisher (abstractions)
-├── infrastructure/
-│   ├── postgres/  ← PostgresUrlRepository (read-only: findByShortCode)
-│   └── redis/
-│       ├── RedisCache.ts          ← get/set with TTL
-│       └── RedisEventPublisher.ts ← XADD to url.clicks.stream
-└── interfaces/http/routes/
-    └── redirect.routes.ts ← single GET /:shortCode handler
+├── config.ts
+├── db/            ← PostgresUrlRepository (read-only: findByShortCode)
+├── redis/         ← RedisCache.ts (get/set with TTL), RedisEventPublisher.ts
+├── routes/        ← redirect.routes.ts (single GET /:shortCode handler)
+├── types.ts       ← interfaces
+└── utils/
 ```
 
 #### Resolution Flow (Cache-Aside Pattern)
@@ -199,61 +223,6 @@ Key behaviours:
 
 ---
 
-### 3.3 `analytics-service`
-
-**Responsibility:** A long-running background worker that drains the `url.clicks.stream` Redis Stream, parses user agents, and bulk-inserts events into `url_clicks`.
-
-#### Architecture
-
-```
-src/
-├── config/           ← stream key, group name, consumer name, batch size, poll interval
-├── infrastructure/
-│   └── postgres/
-│       ├── pool.ts         ← pg.Pool
-│       ├── ensureSchema.ts ← CREATE TABLE IF NOT EXISTS url_clicks (…)
-│       └── AnalyticsRepository.ts
-└── workers/
-    └── clickConsumer.ts ← the entire consumer loop
-```
-
-The service also runs a minimal Fastify HTTP server (healthz endpoint only) alongside the worker — this allows container orchestrators to health-check the process without the worker loop blocking startup.
-
-#### Consumer Loop Detail
-
-```mermaid
-sequenceDiagram
-    participant W as Analytics Worker
-    participant Redis
-    participant PG as PostgreSQL
-
-    W->>Redis: XCREATEGROUP url.clicks.stream (idempotent)
-    loop Every poll cycle
-        W->>Redis: XAUTOCLAIM (reclaim pending > 60s old)
-        alt Has stale pending messages
-            W->>PG: Bulk INSERT url_clicks
-            W->>Redis: XACK (stale ids)
-        end
-        W->>Redis: XREADGROUP GROUP … BLOCK {pollIntervalMs} STREAMS url.clicks.stream >
-        alt Messages received
-            W->>W: parseUserAgent() via ua-parser-js
-            W->>PG: Bulk INSERT url_clicks (multi-row VALUES)
-            W->>Redis: XACK (ids)
-        else Timeout (no new messages)
-            W->>W: continue loop
-        end
-    end
-```
-
-Key behaviours:
-- **Consumer Group**: uses Redis Consumer Groups so multiple instances of the analytics service can run concurrently without double-processing
-- **Crash recovery via `XAUTOCLAIM`**: at the start of each loop iteration, the worker claims any messages that have been pending (unacknowledged) for > 60 seconds. This ensures no click event is lost even if the process restarts mid-batch
-- **Batch INSERT**: a single parameterised `INSERT INTO url_clicks (…) VALUES ($1,…), ($9,…)` statement is constructed for the entire batch, reducing PostgreSQL round-trips and transaction overhead
-- **`ua-parser-js` + `geoip-lite` enrichment**: each raw event is enriched with structured `os`, `browser`, `deviceType`, and `country` fields before insertion. `geoip-lite` uses a bundled GeoIP database for synchronous, offline IP→ISO 3166-1 alpha-2 lookups — no external API calls, no MaxMind license required. Private/loopback IPs resolve to an empty string.
-- **Error isolation**: errors in the consumer loop are caught, logged, and the loop retries after a 2-second delay — the process does not exit on transient failures
-
----
-
 ## 4. Data Model
 
 ### `urls` table (managed by `url-management-service`)
@@ -276,7 +245,7 @@ CREATE INDEX idx_urls_user_created ON urls (user_id, created_at DESC);
 
 > **Note:** `click_count` is a denormalised counter on the `urls` table but is **not updated** by the analytics pipeline — actual click data lives in `url_clicks`. The counter exists for lightweight display; the analytics routes query `url_clicks` for accurate data.
 
-### `url_clicks` table (managed by `analytics-service`)
+### `url_clicks` table (managed by `url-management-service`)
 
 ```sql
 CREATE TABLE url_clicks (
@@ -286,7 +255,7 @@ CREATE TABLE url_clicks (
   ip          TEXT         NOT NULL DEFAULT '',
   user_agent  TEXT         NOT NULL DEFAULT '',
   referrer    TEXT         NOT NULL DEFAULT '',
-  -- Parsed and enriched by analytics-service
+  -- Parsed and enriched by analytics worker
   country     VARCHAR(2)   NOT NULL DEFAULT '',  -- ISO 3166-1 alpha-2
   os          VARCHAR(64)  NOT NULL DEFAULT '',
   browser     VARCHAR(64)  NOT NULL DEFAULT '',
@@ -308,7 +277,7 @@ CREATE INDEX idx_clicks_device        ON url_clicks (short_code, device_type);
 | `url:<shortCode>` | String (JSON) | UMS (create/update), RS (cache-miss populate) | RS | URL resolution cache |
 | `ratelimit:create-url:<userId>` | String (counter) | UMS | UMS | Per-user URL creation rate limit |
 | `fasturl:ratelimit:*` | Hash (by @fastify/rate-limit) | UMS | UMS | Global IP-level rate limit |
-| `url.clicks.stream` | Stream | RS (XADD) | AS (XREADGROUP) | Click event pipeline |
+| `url.clicks.stream` | Stream | RS (XADD) | UMS (XREADGROUP) | Click event pipeline |
 
 ---
 
@@ -318,9 +287,9 @@ CREATE INDEX idx_clicks_device        ON url_clicks (short_code, device_type);
 
 1. **Fire-and-forget analytics pipeline keeps the redirect path lean.** The redirect service responds with a 302 before the `XADD` is even awaited — click recording adds zero latency to the user-visible redirect.
 
-2. **Redis Consumer Groups provide at-least-once delivery with crash safety.** `XAUTOCLAIM` at the top of every loop iteration means that if the analytics process dies mid-batch, messages are reclaimed and re-processed on restart. No click event is silently dropped.
+2. **Redis Consumer Groups provide at-least-once delivery with crash safety.** `XAUTOCLAIM` at the top of every loop iteration means that if the service process dies mid-batch, messages are reclaimed and re-processed on restart. No click event is silently dropped.
 
-3. **Clean Architecture separation inside each service.** Domain logic (short code generation, URL validation, expiry checks) lives in pure classes with no framework dependencies. Infrastructure concerns (Postgres, Redis, Fastify) are injected via interfaces. This makes use-cases independently unit-testable (tests exist for `CreateUrl`, `ResolveShortCode`, and `base62`).
+3. **Simplified Layered Architecture.** We moved away from strict Clean Architecture to a flatter, more pragmatic structure (`db`, `routes`, `services`, `utils`) which reduces boilerplate while keeping use-cases separate and testable.
 
 4. **Two Postgres pool pattern in analytics read-path.** Isolating the heavy `GROUP BY` / `COUNT(*)` queries to a dedicated pool prevents analytical traffic from starving the URL CRUD connection pool under load.
 
@@ -338,4 +307,4 @@ CREATE INDEX idx_clicks_device        ON url_clicks (short_code, device_type);
 
 4. **Single Redis instance is a SPOF.** Both the URL cache and the click event stream depend on the same Redis. Redis Sentinel or Cluster would be needed for high availability in production.
 
-5. **`url-management-service` serves both the CRUD API and the analytics read API.** As analytics query volume grows independently of CRUD traffic, splitting the analytics read-path into its own service (backed by a read replica or a separate OLAP store) would allow independent scaling.
+5. **`url-management-service` serves the CRUD API, analytics read API, and background worker.** As analytics query volume and click processing grows independently of CRUD traffic, splitting the analytics read-path and click processing worker into a dedicated service would allow independent scaling.
