@@ -1,5 +1,5 @@
-import type { Url } from '../domain/entities/Url.js';
-import type { UrlRepository } from '../domain/interfaces/UrlRepository.js';
+import type { Url } from '../types.js';
+import type { UrlRepository } from '../types.js';
 
 export class ListUrls {
     constructor(private readonly repository: UrlRepository) {}

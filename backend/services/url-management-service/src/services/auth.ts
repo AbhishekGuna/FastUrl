@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { bearer } from 'better-auth/plugins';
-import { config } from '../../config/index.js';
-import { pool } from '../postgres/pool.js';
+import { config } from '../config.js';
+import { pool } from '../db/pool.js';
 
 export const auth = betterAuth({
     database: pool,

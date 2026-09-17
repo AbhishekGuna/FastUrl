@@ -1,6 +1,6 @@
 import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyInstance } from 'fastify';
-import { auth } from '../../../infrastructure/auth/auth.js';
+import { auth } from '../services/auth.js';
 
 export async function authRoutes(app: FastifyInstance) {
     app.route({

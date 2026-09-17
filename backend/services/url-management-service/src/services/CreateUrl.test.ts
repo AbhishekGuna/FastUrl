@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Url } from '../domain/entities/Url.js';
-import type { Cache } from '../domain/interfaces/Cache.js';
-import type { NewUrl, UpdateUrlPatch, UrlRepository } from '../domain/interfaces/UrlRepository.js';
+import type { Url } from '../types.js';
+import type { Cache } from '../types.js';
+import type { NewUrl, UpdateUrlPatch, UrlRepository } from '../types.js';
 import { CreateUrl } from './CreateUrl.js';
 
 function makeRepository(existing: Set<string> = new Set()): UrlRepository {

@@ -1,5 +1,5 @@
 import type { Redis } from 'ioredis';
-import type { Cache } from '../../domain/interfaces/Cache.js';
+import type { Cache } from '../types.js';
 
 export class RedisCache implements Cache {
     constructor(private readonly redis: Redis) {}

@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import type { RedirectType, Url } from '../domain/entities/Url.js';
-import type { Cache } from '../domain/interfaces/Cache.js';
-import type { UrlRepository } from '../domain/interfaces/UrlRepository.js';
-import { base62Encode } from '../domain/services/base62.js';
-import { validateDestination } from '../domain/services/validateDestination.js';
+import type { RedirectType, Url } from '../types.js';
+import type { Cache } from '../types.js';
+import type { UrlRepository } from '../types.js';
+import { base62Encode } from '../utils/base62.js';
+import { validateDestination } from '../utils/validateDestination.js';
 
 export interface CreateUrlInput {
     userId: string;

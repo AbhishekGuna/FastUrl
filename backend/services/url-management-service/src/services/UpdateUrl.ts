@@ -1,7 +1,7 @@
-import type { Url } from '../domain/entities/Url.js';
-import type { Cache } from '../domain/interfaces/Cache.js';
-import type { UpdateUrlPatch, UrlRepository } from '../domain/interfaces/UrlRepository.js';
-import { validateDestination } from '../domain/services/validateDestination.js';
+import type { Url } from '../types.js';
+import type { Cache } from '../types.js';
+import type { UpdateUrlPatch, UrlRepository } from '../types.js';
+import { validateDestination } from '../utils/validateDestination.js';
 
 export class UpdateUrl {
     constructor(

@@ -2,7 +2,7 @@ import geoip from 'geoip-lite';
 import type { Redis } from 'ioredis';
 import type { Pool } from 'pg';
 import { UAParser } from 'ua-parser-js';
-import { config } from '../config/index.js';
+import { config } from '../config.js';
 
 /**
  * Raw fields as stored in the Redis Stream by the redirect-service.

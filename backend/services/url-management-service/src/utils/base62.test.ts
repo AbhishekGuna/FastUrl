@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { base62Encode } from './base62.js';
+import { base62Encode } from '../utils/base62.js';
 
 describe('base62Encode', () => {
     it('encodes zero as the first alphabet character', () => {

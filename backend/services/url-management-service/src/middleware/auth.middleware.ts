@@ -1,6 +1,6 @@
 import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { auth } from '../../../infrastructure/auth/auth.js';
+import { auth } from '../services/auth.js';
 
 declare module 'fastify' {
     interface FastifyRequest {

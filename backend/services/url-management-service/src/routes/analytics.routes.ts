@@ -21,7 +21,7 @@ const RANGE_CONFIG: Record<string, { interval: string; trunc: string }> = {
     '7d': { interval: '7 days', trunc: 'day' },
     '30d': { interval: '30 days', trunc: 'day' },
 };
-import type { GetUrl } from '../../../application/GetUrl.js';
+import type { GetUrl } from '../services/GetUrl.js';
 
 export interface AnalyticsDeps {
     getUrl: GetUrl;
