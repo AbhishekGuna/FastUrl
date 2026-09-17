@@ -1,19 +1,19 @@
-import { UAParser } from "ua-parser-js";
-import geoip from "geoip-lite";
-import type { Pool } from "pg";
-import type { Redis } from "ioredis";
-import { config } from "../config/index.js";
+import geoip from 'geoip-lite';
+import type { Redis } from 'ioredis';
+import type { Pool } from 'pg';
+import { UAParser } from 'ua-parser-js';
+import { config } from '../config/index.js';
 
 /**
  * Raw fields as stored in the Redis Stream by the redirect-service.
  */
 interface RawStreamEntry {
-  messageId: string;
-  shortCode: string;
-  timestamp: string;
-  ip: string;
-  userAgent: string;
-  referrer: string;
+    messageId: string;
+    shortCode: string;
+    timestamp: string;
+    ip: string;
+    userAgent: string;
+    referrer: string;
 }
 
 /**
@@ -21,18 +21,13 @@ interface RawStreamEntry {
  * Uses $ so new consumers only pick up messages written after group creation.
  */
 async function ensureConsumerGroup(redis: Redis): Promise<void> {
-  try {
-    await redis.xgroup(
-      "CREATE",
-      config.streamKey,
-      config.consumerGroup,
-      "$",
-      "MKSTREAM"
-    );
-  } catch (err: any) {
-    // BUSYGROUP = group already exists, that's fine
-    if (!err.message?.includes("BUSYGROUP")) throw err;
-  }
+    try {
+        await redis.xgroup('CREATE', config.streamKey, config.consumerGroup, '$', 'MKSTREAM');
+    } catch (err: unknown) {
+        // BUSYGROUP = group already exists, that's fine
+        if (err instanceof Error && !err.message.includes('BUSYGROUP')) throw err;
+        if (!(err instanceof Error)) throw err;
+    }
 }
 
 /**
@@ -40,26 +35,26 @@ async function ensureConsumerGroup(redis: Redis): Promise<void> {
  * ioredis returns entries as [id, [field, value, field, value …]]
  */
 function parseStreamEntry(id: string, fields: string[]): RawStreamEntry {
-  const map: Record<string, string> = {};
-  for (let i = 0; i < fields.length; i += 2) {
-    map[fields[i]] = fields[i + 1];
-  }
-  return {
-    messageId: id,
-    shortCode: map["shortCode"] ?? "",
-    timestamp: map["timestamp"] ?? new Date().toISOString(),
-    ip: map["ip"] ?? "",
-    userAgent: map["userAgent"] ?? "",
-    referrer: map["referrer"] ?? "",
-  };
+    const map: Record<string, string> = {};
+    for (let i = 0; i < fields.length; i += 2) {
+        map[fields[i]] = fields[i + 1];
+    }
+    return {
+        messageId: id,
+        shortCode: map.shortCode ?? '',
+        timestamp: map.timestamp ?? new Date().toISOString(),
+        ip: map.ip ?? '',
+        userAgent: map.userAgent ?? '',
+        referrer: map.referrer ?? '',
+    };
 }
 
 function parseUserAgent(ua: string) {
-  const result = new UAParser(ua).getResult();
-  const deviceType = result.device.type ?? (ua ? "desktop" : "");
-  const os = result.os.name ?? "";
-  const browser = result.browser.name ?? "";
-  return { os, browser, deviceType };
+    const result = new UAParser(ua).getResult();
+    const deviceType = result.device.type ?? (ua ? 'desktop' : '');
+    const os = result.os.name ?? '';
+    const browser = result.browser.name ?? '';
+    return { os, browser, deviceType };
 }
 
 /**
@@ -68,103 +63,115 @@ function parseUserAgent(ua: string) {
  * Returns an empty string for private/loopback IPs or unknown addresses.
  */
 function lookupCountry(ip: string): string {
-  if (!ip) return "";
-  const geo = geoip.lookup(ip);
-  return geo?.country ?? "";
+    if (!ip) return '';
+    const geo = geoip.lookup(ip);
+    return geo?.country ?? '';
 }
 
 async function processBatch(entries: RawStreamEntry[], pool: Pool): Promise<void> {
-  if (entries.length === 0) return;
+    if (entries.length === 0) return;
 
-  // Build a multi-row INSERT for efficiency
-  const values: unknown[] = [];
-  const placeholders = entries.map((e, idx) => {
-    const { os, browser, deviceType } = parseUserAgent(e.userAgent);
-    const country = lookupCountry(e.ip);
-    const base = idx * 9;
-    values.push(
-      e.shortCode,
-      e.timestamp,
-      e.ip,
-      e.userAgent,
-      e.referrer,
-      country,
-      os,
-      browser,
-      deviceType
-    );
-    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9})`;
-  });
+    // Build a multi-row INSERT for efficiency
+    const values: unknown[] = [];
+    const placeholders = entries.map((e, idx) => {
+        const { os, browser, deviceType } = parseUserAgent(e.userAgent);
+        const country = lookupCountry(e.ip);
+        const base = idx * 9;
+        values.push(
+            e.shortCode,
+            e.timestamp,
+            e.ip,
+            e.userAgent,
+            e.referrer,
+            country,
+            os,
+            browser,
+            deviceType,
+        );
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9})`;
+    });
 
-  await pool.query(
-    `INSERT INTO url_clicks
+    await pool.query(
+        `INSERT INTO url_clicks
        (short_code, clicked_at, ip, user_agent, referrer, country, os, browser, device_type)
-     VALUES ${placeholders.join(", ")}`,
-    values
-  );
+     VALUES ${placeholders.join(', ')}`,
+        values,
+    );
 }
 
 /**
  * Long-running worker loop that reads from the Redis Stream consumer group,
  * processes each batch, inserts into Postgres, then ACKs the messages.
  */
-export async function startClickConsumer(redis: Redis, pool: Pool, logger: any): Promise<void> {
-  await ensureConsumerGroup(redis);
-  logger.info(
-    { streamKey: config.streamKey, group: config.consumerGroup, consumer: config.consumerName },
-    "Click consumer started"
-  );
+export async function startClickConsumer(
+    redis: Redis,
+    pool: Pool,
+    logger: {
+        info: (meta: unknown, msg?: string) => void;
+        error: (meta: unknown, msg?: string) => void;
+    },
+): Promise<void> {
+    await ensureConsumerGroup(redis);
+    logger.info(
+        { streamKey: config.streamKey, group: config.consumerGroup, consumer: config.consumerName },
+        'Click consumer started',
+    );
 
-  while (true) {
-    try {
-      // Claim any pending (unacked) messages first so we don't drop events on crash/restart
-      const pending = await redis.xautoclaim(
-        config.streamKey,
-        config.consumerGroup,
-        config.consumerName,
-        60_000, // min-idle-time ms before reclaiming
-        "0-0",
-        "COUNT",
-        config.batchSize
-      );
-      // xautoclaim returns [next-start-id, [[id, fields], ...]]
-      const pendingEntries: RawStreamEntry[] = (pending[1] as [string, string[]][])
-        .map(([id, fields]) => parseStreamEntry(id, fields));
+    while (true) {
+        try {
+            // Claim any pending (unacked) messages first so we don't drop events on crash/restart
+            const pending = await redis.xautoclaim(
+                config.streamKey,
+                config.consumerGroup,
+                config.consumerName,
+                60_000, // min-idle-time ms before reclaiming
+                '0-0',
+                'COUNT',
+                config.batchSize,
+            );
+            // xautoclaim returns [next-start-id, [[id, fields], ...]]
+            const pendingEntries: RawStreamEntry[] = (pending[1] as [string, string[]][]).map(
+                ([id, fields]) => parseStreamEntry(id, fields),
+            );
 
-      if (pendingEntries.length > 0) {
-        await processBatch(pendingEntries, pool);
-        const ids = pendingEntries.map((e) => e.messageId);
-        await redis.xack(config.streamKey, config.consumerGroup, ...ids);
-        logger.info({ count: ids.length }, "Re-processed pending clicks");
-      }
+            if (pendingEntries.length > 0) {
+                await processBatch(pendingEntries, pool);
+                const ids = pendingEntries.map((e) => e.messageId);
+                await redis.xack(config.streamKey, config.consumerGroup, ...ids);
+                logger.info({ count: ids.length }, 'Re-processed pending clicks');
+            }
 
-      // Now read new messages
-      const response = await (redis as any).xreadgroup(
-        "GROUP",
-        config.consumerGroup,
-        config.consumerName,
-        "COUNT",
-        config.batchSize,
-        "BLOCK",
-        config.pollIntervalMs,
-        "STREAMS",
-        config.streamKey,
-        ">"
-      );
+            // Now read new messages
+            const response = await (
+                redis as unknown as Omit<Redis, 'xreadgroup'> & {
+                    xreadgroup: (...args: (string | number)[]) => Promise<unknown>;
+                }
+            ).xreadgroup(
+                'GROUP',
+                config.consumerGroup,
+                config.consumerName,
+                'COUNT',
+                config.batchSize,
+                'BLOCK',
+                config.pollIntervalMs,
+                'STREAMS',
+                config.streamKey,
+                '>',
+            );
 
-      if (!response) continue; // timeout — no new messages
+            if (!response) continue; // timeout — no new messages
 
-      const [, messages] = response[0] as [string, [string, string[]][]];
-      const entries = messages.map(([id, fields]) => parseStreamEntry(id, fields));
+            const [, messages] = response[0] as [string, [string, string[]][]];
+            const entries = messages.map(([id, fields]) => parseStreamEntry(id, fields));
 
-      await processBatch(entries, pool);
+            await processBatch(entries, pool);
 
-      const ids = entries.map((e) => e.messageId);
-      await redis.xack(config.streamKey, config.consumerGroup, ...ids);
-      logger.debug({ count: ids.length }, "Processed click batch");
-    } catch (err) {
-      logger.error({ err }, "Click consumer error — retrying after 2s");
-      await new Promise((r) => setTimeout(r, 2000));
+            const ids = entries.map((e) => e.messageId);
+            await redis.xack(config.streamKey, config.consumerGroup, ...ids);
+            logger.debug({ count: ids.length }, 'Processed click batch');
+        } catch (err) {
+            logger.error({ err }, 'Click consumer error — retrying after 2s');
+            await new Promise((r) => setTimeout(r, 2000));
+        }
     }
-  }
 }

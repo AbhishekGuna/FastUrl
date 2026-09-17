@@ -1,39 +1,43 @@
-import type { FastifyInstance } from "fastify";
-import { fromNodeHeaders } from "better-auth/node";
-import { auth } from "../../../infrastructure/auth/auth.js";
+import { fromNodeHeaders } from 'better-auth/node';
+import type { FastifyInstance } from 'fastify';
+import { auth } from '../../../infrastructure/auth/auth.js';
 
 export async function authRoutes(app: FastifyInstance) {
-  app.route({
-    method: ["GET", "POST"],
-    url: "/api/auth/*",
-    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
-    async handler(request, reply) {
-      try {
-        const url = new URL(request.url, `http://${request.headers.host}`);
-        const headers = fromNodeHeaders(request.headers);
+    app.route({
+        method: ['GET', 'POST'],
+        url: '/api/auth/*',
+        config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+        async handler(request, reply) {
+            try {
+                const url = new URL(request.url, `http://${request.headers.host}`);
+                const headers = fromNodeHeaders(request.headers);
 
-        const req = new Request(url.toString(), {
-          method: request.method,
-          headers,
-          ...(request.body ? { body: JSON.stringify(request.body) } : {}),
-        });
+                const req = new Request(url.toString(), {
+                    method: request.method,
+                    headers,
+                    ...(request.body ? { body: JSON.stringify(request.body) } : {}),
+                });
 
-        const password = (request.body as any)?.password;
-        if (password) {
-          const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[\W_]).+$/;
-          if (!regex.test(password)) {
-            return reply.status(400).send({ error: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character" });
-          }
-        }
+                const password = (request.body as { password?: string })?.password;
+                if (password) {
+                    const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[\W_]).+$/;
+                    if (!regex.test(password)) {
+                        return reply.status(400).send({
+                            error: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+                        });
+                    }
+                }
 
-        const response = await auth.handler(req);
-        reply.status(response.status);
-        response.headers.forEach((value, key) => reply.header(key, value));
-        return reply.send(response.body ? await response.text() : null);
-      } catch (err) {
-        app.log.error(err);
-        return reply.status(500).send({ error: "Internal auth error" });
-      }
-    },
-  });
+                const response = await auth.handler(req);
+                reply.status(response.status);
+                response.headers.forEach((value, key) => {
+                    reply.header(key, value);
+                });
+                return reply.send(response.body ? await response.text() : null);
+            } catch (err) {
+                app.log.error(err);
+                return reply.status(500).send({ error: 'Internal auth error' });
+            }
+        },
+    });
 }

@@ -1,7 +1,7 @@
-import type { Pool } from "pg";
+import type { Pool } from 'pg';
 
 export async function ensureAnalyticsSchema(pool: Pool): Promise<void> {
-  await pool.query(`
+    await pool.query(`
     -- Detailed click-level event log
     CREATE TABLE IF NOT EXISTS url_clicks (
       id            BIGSERIAL PRIMARY KEY,

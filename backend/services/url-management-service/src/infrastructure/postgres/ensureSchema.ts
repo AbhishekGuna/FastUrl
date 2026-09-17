@@ -1,7 +1,7 @@
-import type { Pool } from "pg";
+import type { Pool } from 'pg';
 
 export async function ensureUrlsTable(pool: Pool): Promise<void> {
-  await pool.query(`
+    await pool.query(`
     CREATE TABLE IF NOT EXISTS urls (
         id             BIGSERIAL PRIMARY KEY,
         short_code     VARCHAR(16) NOT NULL,

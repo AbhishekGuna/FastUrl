@@ -1,70 +1,70 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ApiError } from "../api/client";
-import { useAuth } from "../context/AuthContext";
+import type { FormEvent } from 'react';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ApiError } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export function SignIn() {
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+    const { signIn } = useAuth();
+    const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [pending, setPending] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setPending(true);
-    setError(null);
-    try {
-      await signIn(email, password);
-      navigate("/", { replace: true });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't sign in. Try again.");
-    } finally {
-      setPending(false);
+    async function handleSubmit(e: FormEvent) {
+        e.preventDefault();
+        setPending(true);
+        setError(null);
+        try {
+            await signIn(email, password);
+            navigate('/', { replace: true });
+        } catch (err) {
+            setError(err instanceof ApiError ? err.message : "Couldn't sign in. Try again.");
+        } finally {
+            setPending(false);
+        }
     }
-  }
 
-  return (
-    <div className="auth-screen">
-      <div className="auth-sheet">
-        <h1 className="wordmark">FastUrl</h1>
-        <p className="auth-sub">Sign in to manage your links.</p>
+    return (
+        <div className="auth-screen">
+            <div className="auth-sheet">
+                <h1 className="wordmark">FastUrl</h1>
+                <p className="auth-sub">Sign in to manage your links.</p>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <label>
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </label>
+                <form className="auth-form" onSubmit={handleSubmit}>
+                    <label>
+                        Email
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            autoComplete="email"
+                            required
+                        />
+                    </label>
+                    <label>
+                        Password
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            autoComplete="current-password"
+                            required
+                        />
+                    </label>
 
-          {error && <p className="form-error">{error}</p>}
+                    {error && <p className="form-error">{error}</p>}
 
-          <button type="submit" className="primary-button auth-submit" disabled={pending}>
-            {pending ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
+                    <button type="submit" className="primary-button auth-submit" disabled={pending}>
+                        {pending ? 'Signing in…' : 'Sign in'}
+                    </button>
+                </form>
 
-        <p className="auth-switch">
-          No account? <Link to="/sign-up">Sign up</Link>
-        </p>
-      </div>
-    </div>
-  );
+                <p className="auth-switch">
+                    No account? <Link to="/sign-up">Sign up</Link>
+                </p>
+            </div>
+        </div>
+    );
 }

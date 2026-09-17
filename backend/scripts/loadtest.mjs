@@ -16,154 +16,156 @@
 //   DURATION                     seconds per scenario (default 15)
 //   CONNECTIONS                  concurrent connections per scenario (default 50)
 
-import { writeFileSync, mkdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import autocannon from "autocannon";
-import pg from "pg";
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import autocannon from 'autocannon';
+import pg from 'pg';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPORT_DIR = join(__dirname, "..", "loadtest-reports");
+const REPORT_DIR = join(__dirname, '..', 'loadtest-reports');
 
-const REDIRECT_URL = process.env.REDIRECT_URL ?? "http://localhost:4000";
-const URL_MGMT_URL = process.env.URL_MGMT_URL ?? "http://localhost:3000";
+const REDIRECT_URL = process.env.REDIRECT_URL ?? 'http://localhost:4000';
+const URL_MGMT_URL = process.env.URL_MGMT_URL ?? 'http://localhost:3000';
 const DATABASE_URL =
-  process.env.DATABASE_URL ?? "postgres://fasturl:fasturl@localhost:5434/fasturl";
+    process.env.DATABASE_URL ?? 'postgres://fasturl:fasturl@localhost:5434/fasturl';
 const DURATION = Number(process.env.DURATION ?? 15);
 const CONNECTIONS = Number(process.env.CONNECTIONS ?? 50);
 
-const LOADTEST_EMAIL = "loadtest@fasturl.local";
-const LOADTEST_PASSWORD = "LoadTest!2026";
-const SEED_ALIAS = "loadtestseed";
+const LOADTEST_EMAIL = 'loadtest@fasturl.local';
+const LOADTEST_PASSWORD = 'LoadTest!2026';
+const SEED_ALIAS = 'loadtestseed';
 
 // better-auth rejects requests whose Origin header is missing/"null" (Node's
 // fetch sends a literal "null" origin for server-side calls like this one),
 // so every call to /api/auth/* needs a real Origin matching trustedOrigins.
-const AUTH_ORIGIN = "http://localhost:8080";
+const AUTH_ORIGIN = 'http://localhost:8080';
 
 function log(msg) {
-  console.log(`[loadtest] ${msg}`);
+    console.log(`[loadtest] ${msg}`);
 }
 
 async function preflight() {
-  for (const [name, url] of [
-    ["redirect-service", `${REDIRECT_URL}/healthz`],
-    ["url-management-service", `${URL_MGMT_URL}/healthz`],
-  ]) {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
-      if (!res.ok) throw new Error(`status ${res.status}`);
-    } catch (err) {
-      console.error(
-        `\n${name} isn't reachable at ${url} (${err.message}).\n` +
-          `Start it first:\n` +
-          `  docker compose up -d          # from backend/\n` +
-          `  npm run dev:url-management    # from backend/\n` +
-          `  npm run dev:redirect          # from backend/\n`
-      );
-      process.exit(1);
+    for (const [name, url] of [
+        ['redirect-service', `${REDIRECT_URL}/healthz`],
+        ['url-management-service', `${URL_MGMT_URL}/healthz`],
+    ]) {
+        try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+            if (!res.ok) throw new Error(`status ${res.status}`);
+        } catch (err) {
+            console.error(
+                `\n${name} isn't reachable at ${url} (${err.message}).\n` +
+                    `Start it first:\n` +
+                    `  docker compose up -d          # from backend/\n` +
+                    `  npm run dev:url-management    # from backend/\n` +
+                    `  npm run dev:redirect          # from backend/\n`,
+            );
+            process.exit(1);
+        }
     }
-  }
 }
 
 async function signInOrSignUp() {
-  const signIn = await fetch(`${URL_MGMT_URL}/api/auth/sign-in/email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Origin: AUTH_ORIGIN },
-    body: JSON.stringify({ email: LOADTEST_EMAIL, password: LOADTEST_PASSWORD }),
-  });
-  if (signIn.ok) {
-    const data = await signIn.json();
-    log(`signed in as ${LOADTEST_EMAIL}`);
-    return data;
-  }
+    const signIn = await fetch(`${URL_MGMT_URL}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: AUTH_ORIGIN },
+        body: JSON.stringify({ email: LOADTEST_EMAIL, password: LOADTEST_PASSWORD }),
+    });
+    if (signIn.ok) {
+        const data = await signIn.json();
+        log(`signed in as ${LOADTEST_EMAIL}`);
+        return data;
+    }
 
-  const signUp = await fetch(`${URL_MGMT_URL}/api/auth/sign-up/email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Origin: AUTH_ORIGIN },
-    body: JSON.stringify({
-      email: LOADTEST_EMAIL,
-      password: LOADTEST_PASSWORD,
-      name: "Load Test",
-    }),
-  });
-  if (!signUp.ok) {
-    throw new Error(`could not sign in or sign up load-test account: ${await signUp.text()}`);
-  }
-  const data = await signUp.json();
-  log(`created load-test account ${LOADTEST_EMAIL}`);
-  return data;
+    const signUp = await fetch(`${URL_MGMT_URL}/api/auth/sign-up/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: AUTH_ORIGIN },
+        body: JSON.stringify({
+            email: LOADTEST_EMAIL,
+            password: LOADTEST_PASSWORD,
+            name: 'Load Test',
+        }),
+    });
+    if (!signUp.ok) {
+        throw new Error(`could not sign in or sign up load-test account: ${await signUp.text()}`);
+    }
+    const data = await signUp.json();
+    log(`created load-test account ${LOADTEST_EMAIL}`);
+    return data;
 }
 
 async function seedUrl(token) {
-  const create = await fetch(`${URL_MGMT_URL}/api/v1/urls`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      destination: "https://example.com/loadtest-seed",
-      customAlias: SEED_ALIAS,
-    }),
-  });
-  if (create.status === 201) {
-    log(`created seed URL /${SEED_ALIAS}`);
-    return SEED_ALIAS;
-  }
-  if (create.status === 409) {
-    log(`reusing existing seed URL /${SEED_ALIAS}`);
-    return SEED_ALIAS;
-  }
-  throw new Error(`could not seed a URL to redirect against: ${await create.text()}`);
+    const create = await fetch(`${URL_MGMT_URL}/api/v1/urls`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+            destination: 'https://example.com/loadtest-seed',
+            customAlias: SEED_ALIAS,
+        }),
+    });
+    if (create.status === 201) {
+        log(`created seed URL /${SEED_ALIAS}`);
+        return SEED_ALIAS;
+    }
+    if (create.status === 409) {
+        log(`reusing existing seed URL /${SEED_ALIAS}`);
+        return SEED_ALIAS;
+    }
+    throw new Error(`could not seed a URL to redirect against: ${await create.text()}`);
 }
 
 async function warmCache(shortCode) {
-  await fetch(`${REDIRECT_URL}/${shortCode}`, { redirect: "manual" });
+    await fetch(`${REDIRECT_URL}/${shortCode}`, { redirect: 'manual' });
 }
 
 async function cleanup(userId) {
-  const pool = new pg.Pool({ connectionString: DATABASE_URL });
-  try {
-    const { rowCount } = await pool.query(
-      `DELETE FROM urls WHERE user_id = $1 AND short_code <> $2`,
-      [userId, SEED_ALIAS]
-    );
-    log(`cleaned up ${rowCount} URL(s) created by the "create" scenario`);
-  } catch (err) {
-    log(`cleanup skipped (${err.message}) — you may want to clear the urls table manually`);
-  } finally {
-    await pool.end();
-  }
+    const pool = new pg.Pool({ connectionString: DATABASE_URL });
+    try {
+        const { rowCount } = await pool.query(
+            `DELETE FROM urls WHERE user_id = $1 AND short_code <> $2`,
+            [userId, SEED_ALIAS],
+        );
+        log(`cleaned up ${rowCount} URL(s) created by the "create" scenario`);
+    } catch (err) {
+        log(`cleanup skipped (${err.message}) — you may want to clear the urls table manually`);
+    } finally {
+        await pool.end();
+    }
 }
 
 async function run(name, opts) {
-  log(`running "${name}" — ${CONNECTIONS} connections, ${DURATION}s`);
-  const result = await autocannon({ connections: CONNECTIONS, duration: DURATION, ...opts });
-  return { name, result };
+    log(`running "${name}" — ${CONNECTIONS} connections, ${DURATION}s`);
+    const result = await autocannon({ connections: CONNECTIONS, duration: DURATION, ...opts });
+    return { name, result };
 }
 
 function fmt(n, digits = 0) {
-  return Number(n).toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits });
+    return Number(n).toLocaleString('en-US', {
+        maximumFractionDigits: digits,
+        minimumFractionDigits: digits,
+    });
 }
 
 function renderReport(scenarios, meta) {
-  const maxRps = Math.max(...scenarios.map((s) => s.result.requests.average));
+    const maxRps = Math.max(...scenarios.map((s) => s.result.requests.average));
 
-  const rows = scenarios
-    .map(({ name, result: r }) => {
-      const expected2xx = name !== "redirect (cache hit)";
-      const successPct = expected2xx
-        ? (r["2xx"] / (r.requests.total || 1)) * 100
-        : (r["3xx"] / (r.requests.total || 1)) * 100;
-      const healthy = r.errors === 0 && r.timeouts === 0 && successPct > 99;
-      return { name, r, successPct, healthy };
+    const rows = scenarios.map(({ name, result: r }) => {
+        const expected2xx = name !== 'redirect (cache hit)';
+        const successPct = expected2xx
+            ? (r['2xx'] / (r.requests.total || 1)) * 100
+            : (r['3xx'] / (r.requests.total || 1)) * 100;
+        const healthy = r.errors === 0 && r.timeouts === 0 && successPct > 99;
+        return { name, r, successPct, healthy };
     });
 
-  const scenarioCards = rows
-    .map(
-      ({ name, r, successPct, healthy }) => `
+    const scenarioCards = rows
+        .map(
+            ({ name, r, successPct, healthy }) => `
     <div class="card">
       <div class="card-head">
         <h3>${name}</h3>
-        <span class="badge ${healthy ? "ok" : "bad"}">${healthy ? "Healthy" : "Check errors"}</span>
+        <span class="badge ${healthy ? 'ok' : 'bad'}">${healthy ? 'Healthy' : 'Check errors'}</span>
       </div>
       <div class="metric-grid">
         <div class="metric"><span class="v num">${fmt(r.requests.average)}</span><span class="l">req/s avg</span></div>
@@ -179,22 +181,22 @@ function renderReport(scenarios, meta) {
         <summary>Raw autocannon result</summary>
         <pre><code>${JSON.stringify(r, null, 2)}</code></pre>
       </details>
-    </div>`
-    )
-    .join("\n");
+    </div>`,
+        )
+        .join('\n');
 
-  const bars = rows
-    .map(
-      ({ name, r }) => `
+    const bars = rows
+        .map(
+            ({ name, r }) => `
     <div class="bar-row">
       <span class="name">${name}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${((r.requests.average / maxRps) * 100).toFixed(1)}%"></div></div>
       <span class="val num">${fmt(r.requests.average)}/s</span>
-    </div>`
-    )
-    .join("\n");
+    </div>`,
+        )
+        .join('\n');
 
-  return `<!doctype html>
+    return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -273,54 +275,54 @@ function renderReport(scenarios, meta) {
 }
 
 async function main() {
-  await preflight();
+    await preflight();
 
-  const { token, user } = await signInOrSignUp();
-  const shortCode = await seedUrl(token);
-  await warmCache(shortCode);
+    const { token, user } = await signInOrSignUp();
+    const shortCode = await seedUrl(token);
+    await warmCache(shortCode);
 
-  const scenarios = [];
+    const scenarios = [];
 
-  scenarios.push(
-    await run("redirect (cache hit)", {
-      url: `${REDIRECT_URL}/${shortCode}`,
-      method: "GET",
-    })
-  );
+    scenarios.push(
+        await run('redirect (cache hit)', {
+            url: `${REDIRECT_URL}/${shortCode}`,
+            method: 'GET',
+        }),
+    );
 
-  scenarios.push(
-    await run("list (authenticated)", {
-      url: `${URL_MGMT_URL}/api/v1/urls`,
-      method: "GET",
-      headers: { authorization: `Bearer ${token}` },
-    })
-  );
+    scenarios.push(
+        await run('list (authenticated)', {
+            url: `${URL_MGMT_URL}/api/v1/urls`,
+            method: 'GET',
+            headers: { authorization: `Bearer ${token}` },
+        }),
+    );
 
-  scenarios.push(
-    await run("create (authenticated)", {
-      url: `${URL_MGMT_URL}/api/v1/urls`,
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-      body: JSON.stringify({ destination: "https://example.com/loadtest" }),
-    })
-  );
+    scenarios.push(
+        await run('create (authenticated)', {
+            url: `${URL_MGMT_URL}/api/v1/urls`,
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+            body: JSON.stringify({ destination: 'https://example.com/loadtest' }),
+        }),
+    );
 
-  await cleanup(user.id);
+    await cleanup(user.id);
 
-  mkdirSync(REPORT_DIR, { recursive: true });
-  const timestamp = new Date().toISOString();
-  const html = renderReport(scenarios, { timestamp });
+    mkdirSync(REPORT_DIR, { recursive: true });
+    const timestamp = new Date().toISOString();
+    const html = renderReport(scenarios, { timestamp });
 
-  const stamped = join(REPORT_DIR, `${timestamp.replace(/[:.]/g, "-")}.html`);
-  const latest = join(REPORT_DIR, "latest.html");
-  writeFileSync(stamped, html);
-  writeFileSync(latest, html);
+    const stamped = join(REPORT_DIR, `${timestamp.replace(/[:.]/g, '-')}.html`);
+    const latest = join(REPORT_DIR, 'latest.html');
+    writeFileSync(stamped, html);
+    writeFileSync(latest, html);
 
-  log(`report written to ${stamped}`);
-  log(`report written to ${latest}`);
+    log(`report written to ${stamped}`);
+    log(`report written to ${latest}`);
 }
 
 main().catch((err) => {
-  console.error(`\n[loadtest] failed: ${err.message}`);
-  process.exit(1);
+    console.error(`\n[loadtest] failed: ${err.message}`);
+    process.exit(1);
 });

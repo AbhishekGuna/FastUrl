@@ -1,0 +1,25 @@
+{
+    "name": "fasturl",
+    "version": "1.0.0",
+    "description": "FastUrl is a high-performance URL shortener built with a modern, full-stack microservices architecture. It allows users to sign up, create short links (with optional custom aliases), manage their URLs, and view comprehensive analytics for their links.",
+    "main": "index.js",
+    "scripts": {
+        "format": "biome format --write .",
+        "lint": "biome lint --write .",
+        "check": "biome check --write ."
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/AbhishekGuna/FastUrl.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/AbhishekGuna/FastUrl/issues"
+    },
+    "homepage": "https://github.com/AbhishekGuna/FastUrl#readme",
+    "devDependencies": {
+        "@biomejs/biome": "^2.5.14"
+    }
+}
