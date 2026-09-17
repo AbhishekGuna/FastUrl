@@ -30,10 +30,13 @@ export async function ensureAnalyticsSchema(pool: Pool): Promise<void> {
       referrer      TEXT         NOT NULL DEFAULT '',
       -- Parsed fields (resolved by analytics-service worker)
       country       VARCHAR(2)   NOT NULL DEFAULT '',  -- ISO 3166-1 alpha-2
+      city          VARCHAR(100) NOT NULL DEFAULT '',
       os            VARCHAR(64)  NOT NULL DEFAULT '',
       browser       VARCHAR(64)  NOT NULL DEFAULT '',
       device_type   VARCHAR(32)  NOT NULL DEFAULT ''   -- 'mobile' | 'desktop' | 'tablet' | ''
     );
+
+    ALTER TABLE url_clicks ADD COLUMN IF NOT EXISTS city VARCHAR(100) NOT NULL DEFAULT '';
 
     -- Indexes optimised for the queries the API will run
     CREATE INDEX IF NOT EXISTS idx_clicks_short_code_at
@@ -41,6 +44,9 @@ export async function ensureAnalyticsSchema(pool: Pool): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_clicks_country
       ON url_clicks (short_code, country);
+
+    CREATE INDEX IF NOT EXISTS idx_clicks_city
+      ON url_clicks (short_code, city);
 
     CREATE INDEX IF NOT EXISTS idx_clicks_os
       ON url_clicks (short_code, os);

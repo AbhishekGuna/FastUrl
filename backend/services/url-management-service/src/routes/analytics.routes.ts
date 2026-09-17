@@ -9,6 +9,7 @@ export interface ClickSummary {
     topBrowsers: { browser: string; count: number }[];
     topDeviceTypes: { deviceType: string; count: number }[];
     topCountries: { country: string; count: number }[];
+    topCities: { city: string; count: number }[];
 }
 
 export interface TimeSeriesPoint {
@@ -48,42 +49,49 @@ export function registerAnalyticsRoutes(
             const url = await deps.getUrl.execute(shortCode, userId);
             if (!url) return reply.code(404).send({ error: 'Not found' });
 
-            const [totalResult, referrers, os, browsers, devices, countries] = await Promise.all([
-                analyticsPool.query<{ total: string }>(
-                    `SELECT COUNT(*) AS total FROM url_clicks WHERE short_code = $1`,
-                    [shortCode],
-                ),
-                analyticsPool.query<{ referrer: string; count: string }>(
-                    `SELECT COALESCE(NULLIF(referrer, ''), 'Direct') AS referrer, COUNT(*) AS count
+            const [totalResult, referrers, os, browsers, devices, countries, cities] =
+                await Promise.all([
+                    analyticsPool.query<{ total: string }>(
+                        `SELECT COUNT(*) AS total FROM url_clicks WHERE short_code = $1`,
+                        [shortCode],
+                    ),
+                    analyticsPool.query<{ referrer: string; count: string }>(
+                        `SELECT COALESCE(NULLIF(referrer, ''), 'Direct') AS referrer, COUNT(*) AS count
            FROM url_clicks WHERE short_code = $1
            GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
-                    [shortCode],
-                ),
-                analyticsPool.query<{ os: string; count: string }>(
-                    `SELECT COALESCE(NULLIF(os, ''), 'Unknown') AS os, COUNT(*) AS count
+                        [shortCode],
+                    ),
+                    analyticsPool.query<{ os: string; count: string }>(
+                        `SELECT COALESCE(NULLIF(os, ''), 'Unknown') AS os, COUNT(*) AS count
            FROM url_clicks WHERE short_code = $1
            GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
-                    [shortCode],
-                ),
-                analyticsPool.query<{ browser: string; count: string }>(
-                    `SELECT COALESCE(NULLIF(browser, ''), 'Unknown') AS browser, COUNT(*) AS count
+                        [shortCode],
+                    ),
+                    analyticsPool.query<{ browser: string; count: string }>(
+                        `SELECT COALESCE(NULLIF(browser, ''), 'Unknown') AS browser, COUNT(*) AS count
            FROM url_clicks WHERE short_code = $1
            GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
-                    [shortCode],
-                ),
-                analyticsPool.query<{ device_type: string; count: string }>(
-                    `SELECT COALESCE(NULLIF(device_type, ''), 'desktop') AS device_type, COUNT(*) AS count
+                        [shortCode],
+                    ),
+                    analyticsPool.query<{ device_type: string; count: string }>(
+                        `SELECT COALESCE(NULLIF(device_type, ''), 'desktop') AS device_type, COUNT(*) AS count
            FROM url_clicks WHERE short_code = $1
            GROUP BY 1 ORDER BY 2 DESC`,
-                    [shortCode],
-                ),
-                analyticsPool.query<{ country: string; count: string }>(
-                    `SELECT COALESCE(NULLIF(country, ''), 'Unknown') AS country, COUNT(*) AS count
+                        [shortCode],
+                    ),
+                    analyticsPool.query<{ country: string; count: string }>(
+                        `SELECT COALESCE(NULLIF(country, ''), 'Unknown') AS country, COUNT(*) AS count
            FROM url_clicks WHERE short_code = $1
            GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
-                    [shortCode],
-                ),
-            ]);
+                        [shortCode],
+                    ),
+                    analyticsPool.query<{ city: string; count: string }>(
+                        `SELECT COALESCE(NULLIF(city, ''), 'Unknown') AS city, COUNT(*) AS count
+           FROM url_clicks WHERE short_code = $1
+           GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
+                        [shortCode],
+                    ),
+                ]);
 
             const summary: ClickSummary = {
                 totalClicks: Number(totalResult.rows[0]?.total ?? 0),
@@ -102,6 +110,10 @@ export function registerAnalyticsRoutes(
                 })),
                 topCountries: countries.rows.map((r) => ({
                     country: r.country,
+                    count: Number(r.count),
+                })),
+                topCities: cities.rows.map((r) => ({
+                    city: r.city,
                     count: Number(r.count),
                 })),
             };

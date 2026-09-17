@@ -1,8 +1,22 @@
-import geoip from 'geoip-lite';
+import * as maxmind from 'maxmind';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 import type { Redis } from 'ioredis';
 import type { Pool } from 'pg';
 import { UAParser } from 'ua-parser-js';
 import { config } from '../config.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dbPath = path.resolve(__dirname, '../../data/geoip/GeoLite2-City.mmdb');
+
+let geoLookup: maxmind.Reader<maxmind.CityResponse> | null = null;
+async function getGeoLookup() {
+    if (!geoLookup) {
+        geoLookup = await maxmind.open<maxmind.CityResponse>(dbPath);
+    }
+    return geoLookup;
+}
 
 /**
  * Raw fields as stored in the Redis Stream by the redirect-service.
@@ -58,25 +72,28 @@ function parseUserAgent(ua: string) {
 }
 
 /**
- * Resolves an IPv4/IPv6 address to an ISO 3166-1 alpha-2 country code.
- * Uses the bundled geoip-lite database — no external API calls, no license required.
- * Returns an empty string for private/loopback IPs or unknown addresses.
+ * Resolves an IPv4/IPv6 address to an ISO 3166-1 alpha-2 country code and city name.
  */
-function lookupCountry(ip: string): string {
-    if (!ip) return '';
-    const geo = geoip.lookup(ip);
-    return geo?.country ?? '';
+function lookupGeo(ip: string, lookup: maxmind.Reader<maxmind.CityResponse>) {
+    if (!ip) return { country: '', city: '' };
+    const geo = lookup.get(ip);
+    return {
+        country: geo?.country?.iso_code ?? geo?.registered_country?.iso_code ?? '',
+        city: geo?.city?.names?.en ?? '',
+    };
 }
 
 async function processBatch(entries: RawStreamEntry[], pool: Pool): Promise<void> {
     if (entries.length === 0) return;
 
+    const lookup = await getGeoLookup();
+
     // Build a multi-row INSERT for efficiency
     const values: unknown[] = [];
     const placeholders = entries.map((e, idx) => {
         const { os, browser, deviceType } = parseUserAgent(e.userAgent);
-        const country = lookupCountry(e.ip);
-        const base = idx * 9;
+        const { country, city } = lookupGeo(e.ip, lookup);
+        const base = idx * 10;
         values.push(
             e.shortCode,
             e.timestamp,
@@ -84,16 +101,17 @@ async function processBatch(entries: RawStreamEntry[], pool: Pool): Promise<void
             e.userAgent,
             e.referrer,
             country,
+            city,
             os,
             browser,
             deviceType,
         );
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9})`;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10})`;
     });
 
     await pool.query(
         `INSERT INTO url_clicks
-       (short_code, clicked_at, ip, user_agent, referrer, country, os, browser, device_type)
+       (short_code, clicked_at, ip, user_agent, referrer, country, city, os, browser, device_type)
      VALUES ${placeholders.join(', ')}`,
         values,
     );
