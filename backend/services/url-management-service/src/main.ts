@@ -9,7 +9,7 @@ import { GetUrl } from './application/GetUrl.js';
 import { ListUrls } from './application/ListUrls.js';
 import { UpdateUrl } from './application/UpdateUrl.js';
 import { config } from './config/index.js';
-import { ensureUrlsTable } from './infrastructure/postgres/ensureSchema.js';
+import { ensureAnalyticsSchema, ensureUrlsTable } from './infrastructure/postgres/ensureSchema.js';
 import { PostgresUrlRepository } from './infrastructure/postgres/PostgresUrlRepository.js';
 import { pool } from './infrastructure/postgres/pool.js';
 import { RedisCache } from './infrastructure/redis/RedisCache.js';
@@ -17,11 +17,13 @@ import { registerAnalyticsRoutes } from './interfaces/http/routes/analytics.rout
 import { authRoutes } from './interfaces/http/routes/auth.routes.js';
 import { meRoutes } from './interfaces/http/routes/me.routes.js';
 import { registerUrlRoutes } from './interfaces/http/routes/url.routes.js';
+import { startClickConsumer } from './workers/clickConsumer.js';
 
 async function main() {
     const app = Fastify({ logger: true });
 
     await ensureUrlsTable(pool);
+    await ensureAnalyticsSchema(pool);
 
     const analyticsPool = new Pool({ connectionString: config.databaseUrl });
 
@@ -59,6 +61,11 @@ async function main() {
     registerAnalyticsRoutes(app, analyticsPool, urlDeps);
 
     await app.listen({ port: config.port, host: '0.0.0.0' });
+
+    startClickConsumer(redis, analyticsPool, app.log).catch((err) => {
+        app.log.fatal({ err }, 'Click consumer crashed — exiting');
+        process.exit(1);
+    });
 }
 
 main().catch((err) => {

@@ -4,11 +4,10 @@ The backend of FastUrl is a microservices architecture built with Node.js, Fasti
 
 ## Services
 
-The backend is split into three specialized services:
+The backend is split into two specialized services:
 
-1. **URL Management Service** (`services/url-management-service`): Handles user authentication and CRUD operations for links.
+1. **URL Management Service** (`services/url-management-service`): Handles user authentication, CRUD operations for links, and consumes click events from Redis Streams for analytics tracking.
 2. **Redirect Service** (`services/redirect-service`): Optimized for fast URL resolution and redirecting users. It publishes click events to a Redis Stream.
-3. **Analytics Service** (`services/analytics-service`): Consumes click events from Redis Streams, processes them, and serves analytical data (time-series, referrers, locations, devices) to the frontend.
 
 See the `README.md` inside each service's directory for specific setup and API documentation.
 
@@ -25,7 +24,6 @@ Then, you can start all services concurrently (or start them individually from t
 ```bash
 npm run dev:url-management -w . &
 npm run dev:redirect -w . &
-npm run dev:analytics -w . &
 ```
 
 ## Load Testing

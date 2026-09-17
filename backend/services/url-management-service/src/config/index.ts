@@ -8,4 +8,9 @@ export const config = {
     authUrl: process.env.BETTER_AUTH_URL ?? `http://localhost:${port}`,
     shortUrlBase: process.env.SHORT_URL_BASE ?? `http://localhost:${port}`,
     corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:8080').split(','),
+    streamKey: 'url.clicks.stream',
+    consumerGroup: 'analytics-workers',
+    consumerName: `worker-${process.pid}`,
+    batchSize: 50,
+    pollIntervalMs: 500,
 };
