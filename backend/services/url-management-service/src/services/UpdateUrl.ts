@@ -1,6 +1,4 @@
-import type { Url } from '../types.js';
-import type { Cache } from '../types.js';
-import type { UpdateUrlPatch, UrlRepository } from '../types.js';
+import type { Cache, UpdateUrlPatch, Url, UrlRepository } from '../types.js';
 import { validateDestination } from '../utils/validateDestination.js';
 
 export class UpdateUrl {

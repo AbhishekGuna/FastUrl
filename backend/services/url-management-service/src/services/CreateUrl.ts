@@ -1,7 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import type { RedirectType, Url } from '../types.js';
-import type { Cache } from '../types.js';
-import type { UrlRepository } from '../types.js';
+import type { Cache, RedirectType, Url, UrlRepository } from '../types.js';
 import { base62Encode } from '../utils/base62.js';
 import { validateDestination } from '../utils/validateDestination.js';
 

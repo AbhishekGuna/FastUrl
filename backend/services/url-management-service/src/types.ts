@@ -21,7 +21,6 @@ export interface Cache {
     delete(key: string): Promise<void>;
 }
 
-
 export interface NewUrl {
     shortCode: string;
     userId: string;
@@ -43,4 +42,3 @@ export interface UrlRepository {
     update(shortCode: string, userId: string, patch: UpdateUrlPatch): Promise<Url | null>;
     existsByShortCode(shortCode: string): Promise<boolean>;
 }
-

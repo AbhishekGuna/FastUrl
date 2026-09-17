@@ -1,5 +1,4 @@
-import type { Url } from '../types.js';
-import type { UrlRepository } from '../types.js';
+import type { Url, UrlRepository } from '../types.js';
 
 export class ListUrls {
     constructor(private readonly repository: UrlRepository) {}

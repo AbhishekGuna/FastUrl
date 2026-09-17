@@ -1,10 +1,5 @@
 import type { Pool } from 'pg';
-import type { Url } from '../types.js';
-import type {
-    NewUrl,
-    UpdateUrlPatch,
-    UrlRepository,
-} from '../types.js';
+import type { NewUrl, UpdateUrlPatch, Url, UrlRepository } from '../types.js';
 
 export class PostgresUrlRepository implements UrlRepository {
     constructor(private readonly pool: Pool) {}

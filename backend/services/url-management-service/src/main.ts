@@ -4,10 +4,6 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyError } from 'fastify';
 import { Redis } from 'ioredis';
 import { Pool } from 'pg';
-import { CreateUrl } from './services/CreateUrl.js';
-import { GetUrl } from './services/GetUrl.js';
-import { ListUrls } from './services/ListUrls.js';
-import { UpdateUrl } from './services/UpdateUrl.js';
 import { config } from './config.js';
 import { ensureAnalyticsSchema, ensureUrlsTable } from './db/ensureSchema.js';
 import { PostgresUrlRepository } from './db/PostgresUrlRepository.js';
@@ -17,6 +13,10 @@ import { registerAnalyticsRoutes } from './routes/analytics.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { meRoutes } from './routes/me.routes.js';
 import { registerUrlRoutes } from './routes/url.routes.js';
+import { CreateUrl } from './services/CreateUrl.js';
+import { GetUrl } from './services/GetUrl.js';
+import { ListUrls } from './services/ListUrls.js';
+import { UpdateUrl } from './services/UpdateUrl.js';
 import { startClickConsumer } from './workers/clickConsumer.js';
 
 async function main() {

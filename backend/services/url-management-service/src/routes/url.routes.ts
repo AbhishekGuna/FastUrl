@@ -1,13 +1,13 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Redis } from 'ioredis';
+import { config } from '../config.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
+import { createUrlRateLimit } from '../middleware/rateLimit.middleware.js';
 import type { CreateUrl } from '../services/CreateUrl.js';
 import type { GetUrl } from '../services/GetUrl.js';
 import type { ListUrls } from '../services/ListUrls.js';
 import type { UpdateUrl } from '../services/UpdateUrl.js';
-import { config } from '../config.js';
 import type { UrlStatus } from '../types.js';
-import { requireAuth } from '../middleware/auth.middleware.js';
-import { createUrlRateLimit } from '../middleware/rateLimit.middleware.js';
 
 interface Deps {
     createUrl: CreateUrl;

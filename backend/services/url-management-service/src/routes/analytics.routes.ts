@@ -21,13 +21,18 @@ const RANGE_CONFIG: Record<string, { interval: string; trunc: string }> = {
     '7d': { interval: '7 days', trunc: 'day' },
     '30d': { interval: '30 days', trunc: 'day' },
 };
+
 import type { GetUrl } from '../services/GetUrl.js';
 
 export interface AnalyticsDeps {
     getUrl: GetUrl;
 }
 
-export function registerAnalyticsRoutes(app: FastifyInstance, analyticsPool: Pool, deps: AnalyticsDeps) {
+export function registerAnalyticsRoutes(
+    app: FastifyInstance,
+    analyticsPool: Pool,
+    deps: AnalyticsDeps,
+) {
     /**
      * GET /api/v1/urls/:shortCode/analytics/summary
      * Returns aggregated breakdown: total clicks, top referrers, OS, browser, device, country.
