@@ -28,7 +28,7 @@ export async function ensureAnalyticsSchema(pool: Pool): Promise<void> {
       ip            TEXT         NOT NULL DEFAULT '',
       user_agent    TEXT         NOT NULL DEFAULT '',
       referrer      TEXT         NOT NULL DEFAULT '',
-      -- Parsed fields (resolved by analytics-service worker)
+      -- Parsed fields (resolved by click consumer worker)
       country       VARCHAR(2)   NOT NULL DEFAULT '',  -- ISO 3166-1 alpha-2
       city          VARCHAR(100) NOT NULL DEFAULT '',
       os            VARCHAR(64)  NOT NULL DEFAULT '',
