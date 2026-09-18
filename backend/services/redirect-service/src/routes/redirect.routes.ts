@@ -19,10 +19,7 @@ export function registerRedirectRoutes(
         // Send the redirect immediately — analytics is fire-and-forget
         reply.code(result.url.redirectType).header('Location', result.url.destination).send();
 
-        const ip =
-            (request.headers['x-forwarded-for'] as string | undefined)?.split(',')[0].trim() ??
-            request.ip ??
-            '';
+        const ip = request.ip;
 
         const query = request.query as { ref?: string };
 

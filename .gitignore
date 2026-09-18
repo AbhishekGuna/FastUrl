@@ -37,3 +37,5 @@ coverage/
 
 # Backend load testing
 backend/loadtest-reports/
+
+.agents/

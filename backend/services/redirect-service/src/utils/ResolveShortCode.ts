@@ -20,7 +20,11 @@ export class ResolveShortCode {
         if (!url) {
             url = await this.repository.findByShortCode(shortCode);
             if (!url) return { outcome: 'not_found' };
-            await this.cache.set(cacheKey, url, config.urlCacheTtlSeconds);
+            await this.cache.set(
+                cacheKey,
+                url,
+                config.urlCacheTtlSeconds + Math.floor(Math.random() * 60 * 5),
+            );
         }
 
         if (url.status !== 'ACTIVE') return { outcome: 'disabled' };
