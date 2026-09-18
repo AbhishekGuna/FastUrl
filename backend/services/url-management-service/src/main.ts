@@ -5,7 +5,7 @@ import Fastify, { type FastifyError } from 'fastify';
 import { Redis } from 'ioredis';
 import { Pool } from 'pg';
 import { config } from './config.js';
-import { ensureAnalyticsSchema, ensureUrlsTable, ensureAuthSchema } from './db/ensureSchema.js';
+import { ensureAnalyticsSchema, ensureAuthSchema, ensureUrlsTable } from './db/ensureSchema.js';
 import { PostgresUrlRepository } from './db/PostgresUrlRepository.js';
 import { pool } from './db/pool.js';
 import { RedisCache } from './redis/RedisCache.js';

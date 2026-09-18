@@ -1,9 +1,9 @@
+import type { Redis } from 'ioredis';
 import * as maxmind from 'maxmind';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
-import type { Redis } from 'ioredis';
 import type { Pool } from 'pg';
 import { UAParser } from 'ua-parser-js';
+import { fileURLToPath } from 'url';
 import { config } from '../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
