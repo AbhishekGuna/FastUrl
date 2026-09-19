@@ -1,5 +1,6 @@
 import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyInstance } from 'fastify';
+import { AuthLoginSchema } from '../schemas/auth.schema.js';
 import { auth } from '../services/auth.js';
 
 export async function authRoutes(app: FastifyInstance) {
@@ -18,14 +19,12 @@ export async function authRoutes(app: FastifyInstance) {
                     ...(request.body ? { body: JSON.stringify(request.body) } : {}),
                 });
 
-                const password = (request.body as { password?: string })?.password;
-                if (password) {
-                    const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[\W_]).+$/;
-                    if (!regex.test(password)) {
-                        return reply.status(400).send({
-                            error: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
-                        });
-                    }
+                const parsedBody = AuthLoginSchema.safeParse(request.body || {});
+                if (!parsedBody.success) {
+                    return reply.status(400).send({
+                        error: 'Validation Error',
+                        details: parsedBody.error.flatten(),
+                    });
                 }
 
                 const response = await auth.handler(req);

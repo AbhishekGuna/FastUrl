@@ -1,6 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { requireAuth } from '../middleware/auth.middleware.js';
+import {
+    AnalyticsParamsSchema,
+    AnalyticsTimeseriesQuerySchema,
+} from '../schemas/analytics.schema.js';
 
 export interface ClickSummary {
     totalClicks: number;
@@ -17,11 +21,7 @@ export interface TimeSeriesPoint {
     clicks: number;
 }
 
-const RANGE_CONFIG: Record<string, { interval: string; trunc: string }> = {
-    '24h': { interval: '24 hours', trunc: 'hour' },
-    '7d': { interval: '7 days', trunc: 'day' },
-    '30d': { interval: '30 days', trunc: 'day' },
-};
+import { RANGE_CONFIG } from '../constant.js';
 
 import type { GetUrl } from '../services/GetUrl.js';
 
@@ -42,7 +42,14 @@ export function registerAnalyticsRoutes(
         '/api/v1/urls/:shortCode/analytics/summary',
         { preHandler: requireAuth },
         async (request, reply) => {
-            const { shortCode } = request.params as { shortCode: string };
+            const parsedParams = AnalyticsParamsSchema.safeParse(request.params);
+            if (!parsedParams.success) {
+                return reply
+                    .code(400)
+                    .send({ error: 'Validation Error', details: parsedParams.error.flatten() });
+            }
+            const { shortCode } = parsedParams.data;
+
             const userId = request.user?.id;
             if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
@@ -130,8 +137,22 @@ export function registerAnalyticsRoutes(
         '/api/v1/urls/:shortCode/analytics/timeseries',
         { preHandler: requireAuth },
         async (request, reply) => {
-            const { shortCode } = request.params as { shortCode: string };
-            const { range = '7d' } = request.query as { range?: string };
+            const parsedParams = AnalyticsParamsSchema.safeParse(request.params);
+            if (!parsedParams.success) {
+                return reply
+                    .code(400)
+                    .send({ error: 'Validation Error', details: parsedParams.error.flatten() });
+            }
+            const { shortCode } = parsedParams.data;
+
+            const parsedQuery = AnalyticsTimeseriesQuerySchema.safeParse(request.query || {});
+            if (!parsedQuery.success) {
+                return reply
+                    .code(400)
+                    .send({ error: 'Validation Error', details: parsedQuery.error.flatten() });
+            }
+            const { range } = parsedQuery.data;
+
             const userId = request.user?.id;
             if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 

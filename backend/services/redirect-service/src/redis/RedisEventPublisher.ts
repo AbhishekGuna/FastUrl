@@ -1,9 +1,6 @@
 import type { Redis } from 'ioredis';
+import { STREAM_KEY, STREAM_MAXLEN } from '../constant.js';
 import type { EventPublisher, RawClickEvent } from '../types.js';
-
-const STREAM_KEY = 'url.clicks.stream';
-// Keep the stream trimmed to ~1M events to prevent unbounded growth
-const STREAM_MAXLEN = 1_000_000;
 
 export class RedisEventPublisher implements EventPublisher {
     constructor(private readonly redis: Redis) {}

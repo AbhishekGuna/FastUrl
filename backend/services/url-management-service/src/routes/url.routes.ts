@@ -3,6 +3,12 @@ import type { Redis } from 'ioredis';
 import { config } from '../config.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { createUrlRateLimit } from '../middleware/rateLimit.middleware.js';
+import {
+    CreateUrlSchema,
+    ListUrlsQuerySchema,
+    UpdateUrlSchema,
+    UrlParamsSchema,
+} from '../schemas/url.schema.js';
 import type { CreateUrl } from '../services/CreateUrl.js';
 import type { GetUrl } from '../services/GetUrl.js';
 import type { ListUrls } from '../services/ListUrls.js';
@@ -17,15 +23,7 @@ interface Deps {
     redis: Redis;
 }
 
-const CREATE_URL_RATE_LIMIT = { max: 30, windowSeconds: 60 };
-
-const DOMAIN_ERROR_STATUS: Record<string, number> = {
-    INVALID_DESTINATION: 400,
-    UNSUPPORTED_PROTOCOL: 400,
-    INVALID_ALIAS: 400,
-    ALIAS_TAKEN: 409,
-    SHORT_CODE_GENERATION_FAILED: 503,
-};
+import { CREATE_URL_RATE_LIMIT, DOMAIN_ERROR_STATUS } from '../constant.js';
 
 function sendDomainError(reply: FastifyReply, err: unknown) {
     if (err instanceof Error && err.message in DOMAIN_ERROR_STATUS) {
@@ -33,8 +31,6 @@ function sendDomainError(reply: FastifyReply, err: unknown) {
     }
     throw err;
 }
-
-const VALID_STATUSES: UrlStatus[] = ['ACTIVE', 'DISABLED'];
 
 export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
     const createRateLimit = createUrlRateLimit(deps.redis, CREATE_URL_RATE_LIMIT);
@@ -45,11 +41,14 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
         async (request, reply) => {
             const userId = request.user?.id;
             if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
-            const body = request.body as {
-                destination: string;
-                customAlias?: string;
-                expiresAt?: string | null;
-            };
+
+            const parsedBody = CreateUrlSchema.safeParse(request.body);
+            if (!parsedBody.success) {
+                return reply
+                    .code(400)
+                    .send({ error: 'Validation Error', details: parsedBody.error.flatten() });
+            }
+            const body = parsedBody.data;
 
             try {
                 const url = await deps.createUrl.execute({ userId, ...body });
@@ -68,16 +67,27 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
     app.get('/api/v1/urls', { preHandler: requireAuth }, async (request, reply) => {
         const userId = request.user?.id;
         if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
-        const { limit, offset } = request.query as { limit?: string; offset?: string };
-        return deps.listUrls.execute(
-            userId,
-            limit ? Number(limit) : undefined,
-            offset ? Number(offset) : undefined,
-        );
+
+        const parsedQuery = ListUrlsQuerySchema.safeParse(request.query);
+        if (!parsedQuery.success) {
+            return reply
+                .code(400)
+                .send({ error: 'Validation Error', details: parsedQuery.error.flatten() });
+        }
+        const { limit, offset } = parsedQuery.data;
+
+        return deps.listUrls.execute(userId, limit, offset);
     });
 
     app.get('/api/v1/urls/:shortCode', { preHandler: requireAuth }, async (request, reply) => {
-        const { shortCode } = request.params as { shortCode: string };
+        const parsedParams = UrlParamsSchema.safeParse(request.params);
+        if (!parsedParams.success) {
+            return reply
+                .code(400)
+                .send({ error: 'Validation Error', details: parsedParams.error.flatten() });
+        }
+        const { shortCode } = parsedParams.data;
+
         const userId = request.user?.id;
         if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
         const url = await deps.getUrl.execute(shortCode, userId);
@@ -86,16 +96,21 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
     });
 
     app.patch('/api/v1/urls/:shortCode', { preHandler: requireAuth }, async (request, reply) => {
-        const { shortCode } = request.params as { shortCode: string };
-        const patch = request.body as {
-            destination?: string;
-            status?: string;
-            expiresAt?: string | null;
-        };
-
-        if (patch.status !== undefined && !VALID_STATUSES.includes(patch.status as UrlStatus)) {
-            return reply.code(400).send({ error: 'INVALID_STATUS' });
+        const parsedParams = UrlParamsSchema.safeParse(request.params);
+        if (!parsedParams.success) {
+            return reply
+                .code(400)
+                .send({ error: 'Validation Error', details: parsedParams.error.flatten() });
         }
+        const { shortCode } = parsedParams.data;
+
+        const parsedBody = UpdateUrlSchema.safeParse(request.body);
+        if (!parsedBody.success) {
+            return reply
+                .code(400)
+                .send({ error: 'Validation Error', details: parsedBody.error.flatten() });
+        }
+        const patch = parsedBody.data;
 
         const userId = request.user?.id;
         if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
@@ -114,7 +129,14 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
     });
 
     app.delete('/api/v1/urls/:shortCode', { preHandler: requireAuth }, async (request, reply) => {
-        const { shortCode } = request.params as { shortCode: string };
+        const parsedParams = UrlParamsSchema.safeParse(request.params);
+        if (!parsedParams.success) {
+            return reply
+                .code(400)
+                .send({ error: 'Validation Error', details: parsedParams.error.flatten() });
+        }
+        const { shortCode } = parsedParams.data;
+
         const userId = request.user?.id;
         if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
         const updated = await deps.updateUrl.execute(shortCode, userId, { status: 'DISABLED' });

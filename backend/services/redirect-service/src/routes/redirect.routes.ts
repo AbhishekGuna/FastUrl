@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { RedirectParamsSchema, RedirectQuerySchema } from '../schemas/redirect.schema.js';
 import type { EventPublisher } from '../types.js';
 import type { ResolveShortCode } from '../utils/ResolveShortCode.js';
 
@@ -8,7 +9,21 @@ export function registerRedirectRoutes(
     eventPublisher: EventPublisher,
 ) {
     app.get('/:shortCode', async (request, reply) => {
-        const { shortCode } = request.params as { shortCode: string };
+        const parsedParams = RedirectParamsSchema.safeParse(request.params);
+        if (!parsedParams.success) {
+            return reply
+                .code(400)
+                .send({ error: 'Validation Error', details: parsedParams.error.flatten() });
+        }
+        const { shortCode } = parsedParams.data;
+
+        const parsedQuery = RedirectQuerySchema.safeParse(request.query || {});
+        if (!parsedQuery.success) {
+            return reply
+                .code(400)
+                .send({ error: 'Validation Error', details: parsedQuery.error.flatten() });
+        }
+        const query = parsedQuery.data;
 
         const result = await resolveShortCode.execute(shortCode);
 
@@ -20,8 +35,6 @@ export function registerRedirectRoutes(
         reply.code(result.url.redirectType).header('Location', result.url.destination).send();
 
         const ip = request.ip;
-
-        const query = request.query as { ref?: string };
 
         eventPublisher
             .publishClick({

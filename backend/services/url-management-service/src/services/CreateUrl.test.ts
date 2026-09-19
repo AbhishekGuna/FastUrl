@@ -6,6 +6,11 @@ function makeRepository(existing: Set<string> = new Set()): UrlRepository {
     const store = new Map<string, Url>();
     return {
         async create(input: NewUrl): Promise<Url> {
+            if (store.has(input.shortCode) || existing.has(input.shortCode)) {
+                throw Object.assign(new Error('duplicate key value violates unique constraint'), {
+                    code: '23505',
+                });
+            }
             const url: Url = {
                 id: '1',
                 shortCode: input.shortCode,
@@ -111,5 +116,26 @@ describe('CreateUrl', () => {
                 customAlias: 'not valid!',
             }),
         ).rejects.toThrow('INVALID_ALIAS');
+    });
+
+    it('handles TOCTOU race condition when custom alias is taken concurrently', async () => {
+        const repository = makeRepository();
+        // Override existsByShortCode to simulate passing the initial check
+        repository.existsByShortCode = async () => false;
+        // Override create to simulate the unique constraint violation during insert
+        repository.create = async () => {
+            throw Object.assign(new Error('duplicate key value violates unique constraint'), {
+                code: '23505',
+            });
+        };
+
+        const createUrl = new CreateUrl(repository, makeCache());
+        await expect(
+            createUrl.execute({
+                userId: 'user-1',
+                destination: 'https://example.com',
+                customAlias: 'race-alias',
+            }),
+        ).rejects.toThrow('ALIAS_TAKEN');
     });
 });

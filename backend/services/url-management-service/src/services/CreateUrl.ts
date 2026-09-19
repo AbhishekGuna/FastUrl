@@ -3,7 +3,7 @@ import type { Cache, RedirectType, Url, UrlRepository } from '../types.js';
 import { base62Encode } from '../utils/base62.js';
 import { validateDestination } from '../utils/validateDestination.js';
 
-export interface CreateUrlInput {
+interface CreateUrlInput {
     userId: string;
     destination: string;
     customAlias?: string;
@@ -11,8 +11,8 @@ export interface CreateUrlInput {
     expiresAt?: string | null;
 }
 
-const URL_CACHE_TTL_SECONDS = 3600;
-const CUSTOM_ALIAS_PATTERN = /^[A-Za-z0-9_-]{1,16}$/;
+import { URL_CACHE_TTL_SECONDS } from '../constant.js';
+import { CUSTOM_ALIAS_PATTERN } from '../regex.js';
 
 export class CreateUrl {
     constructor(
@@ -27,13 +27,29 @@ export class CreateUrl {
             ? await this.reserveCustomAlias(input.customAlias)
             : await this.generateUniqueShortCode();
 
-        const url = await this.repository.create({
-            shortCode,
-            userId: input.userId,
-            destination: input.destination,
-            redirectType: input.redirectType ?? 302,
-            expiresAt: input.expiresAt ?? null,
-        });
+        let url: Url;
+        try {
+            url = await this.repository.create({
+                shortCode,
+                userId: input.userId,
+                destination: input.destination,
+                redirectType: input.redirectType ?? 302,
+                expiresAt: input.expiresAt ?? null,
+            });
+        } catch (error) {
+            if (
+                error &&
+                typeof error === 'object' &&
+                'code' in error &&
+                (error as Record<string, unknown>).code === '23505'
+            ) {
+                if (input.customAlias) {
+                    throw new Error('ALIAS_TAKEN');
+                }
+                throw new Error('SHORT_CODE_GENERATION_FAILED');
+            }
+            throw error;
+        }
 
         await this.cache.set(`url:${shortCode}`, url, URL_CACHE_TTL_SECONDS);
         return url;
