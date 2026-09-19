@@ -83,38 +83,122 @@ function lookupGeo(ip: string, lookup: maxmind.Reader<maxmind.CityResponse>) {
     };
 }
 
-async function processBatch(entries: RawStreamEntry[], pool: Pool): Promise<void> {
+async function processBatch(
+    entries: RawStreamEntry[],
+    pool: Pool,
+    redis: Redis,
+    logger: {
+        info: (meta: unknown, msg?: string) => void;
+        error: (meta: unknown, msg?: string) => void;
+        debug: (meta: unknown, msg?: string) => void;
+    },
+    isPending = false,
+): Promise<void> {
     if (entries.length === 0) return;
 
     const lookup = await getGeoLookup();
 
-    // Build a multi-row INSERT for efficiency
-    const values: unknown[] = [];
-    const placeholders = entries.map((e, idx) => {
-        const { os, browser, deviceType } = parseUserAgent(e.userAgent);
-        const { country, city } = lookupGeo(e.ip, lookup);
-        const base = idx * 10;
-        values.push(
-            e.shortCode,
-            e.timestamp,
-            e.ip,
-            e.userAgent,
-            e.referrer,
-            country,
-            city,
-            os,
-            browser,
-            deviceType,
-        );
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10})`;
-    });
+    try {
+        // Build a multi-row INSERT for efficiency
+        const values: unknown[] = [];
+        const placeholders = entries.map((e, idx) => {
+            const { os, browser, deviceType } = parseUserAgent(e.userAgent);
+            const { country, city } = lookupGeo(e.ip, lookup);
+            const base = idx * 10;
+            values.push(
+                e.shortCode,
+                e.timestamp,
+                e.ip,
+                e.userAgent,
+                e.referrer,
+                country,
+                city,
+                os,
+                browser,
+                deviceType,
+            );
+            return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10})`;
+        });
 
-    await pool.query(
-        `INSERT INTO url_clicks
-       (short_code, clicked_at, ip, user_agent, referrer, country, city, os, browser, device_type)
-     VALUES ${placeholders.join(', ')}`,
-        values,
-    );
+        await pool.query(
+            `INSERT INTO url_clicks
+           (short_code, clicked_at, ip, user_agent, referrer, country, city, os, browser, device_type)
+         VALUES ${placeholders.join(', ')}`,
+            values,
+        );
+
+        const ids = entries.map((e) => e.messageId);
+        await redis.xack(config.streamKey, config.consumerGroup, ...ids);
+
+        if (isPending) {
+            logger.info({ count: ids.length }, 'Re-processed pending clicks');
+        } else {
+            logger.debug({ count: ids.length }, 'Processed click batch');
+        }
+    } catch (err) {
+        logger.error({ err }, 'Batch insert failed, falling back to individual processing');
+
+        for (const e of entries) {
+            try {
+                const { os, browser, deviceType } = parseUserAgent(e.userAgent);
+                const { country, city } = lookupGeo(e.ip, lookup);
+
+                await pool.query(
+                    `INSERT INTO url_clicks
+                   (short_code, clicked_at, ip, user_agent, referrer, country, city, os, browser, device_type)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                    [
+                        e.shortCode,
+                        e.timestamp,
+                        e.ip,
+                        e.userAgent,
+                        e.referrer,
+                        country,
+                        city,
+                        os,
+                        browser,
+                        deviceType,
+                    ],
+                );
+
+                await redis.xack(config.streamKey, config.consumerGroup, e.messageId);
+            } catch (singleErr) {
+                logger.error(
+                    { err: singleErr, messageId: e.messageId },
+                    'Failed to process individual message, sending to DLQ',
+                );
+
+                try {
+                    await redis.xadd(
+                        `${config.streamKey}:dlq`,
+                        '*',
+                        'originalId',
+                        e.messageId,
+                        'shortCode',
+                        e.shortCode,
+                        'timestamp',
+                        e.timestamp,
+                        'ip',
+                        e.ip,
+                        'userAgent',
+                        e.userAgent,
+                        'referrer',
+                        e.referrer,
+                        'error',
+                        singleErr instanceof Error ? singleErr.message : String(singleErr),
+                    );
+                } catch (dlqErr) {
+                    logger.error(
+                        { err: dlqErr, messageId: e.messageId },
+                        'Failed to send message to DLQ',
+                    );
+                }
+
+                // ACK the bad message anyway to prevent poison pill loop
+                await redis.xack(config.streamKey, config.consumerGroup, e.messageId);
+            }
+        }
+    }
 }
 
 /**
@@ -154,10 +238,7 @@ export async function startClickConsumer(
             );
 
             if (pendingEntries.length > 0) {
-                await processBatch(pendingEntries, pool);
-                const ids = pendingEntries.map((e) => e.messageId);
-                await redis.xack(config.streamKey, config.consumerGroup, ...ids);
-                logger.info({ count: ids.length }, 'Re-processed pending clicks');
+                await processBatch(pendingEntries, pool, redis, logger, true);
             }
 
             // Now read new messages
@@ -184,11 +265,7 @@ export async function startClickConsumer(
             const [, messages] = respArray[0];
             const entries = messages.map(([id, fields]) => parseStreamEntry(id, fields));
 
-            await processBatch(entries, pool);
-
-            const ids = entries.map((e) => e.messageId);
-            await redis.xack(config.streamKey, config.consumerGroup, ...ids);
-            logger.debug({ count: ids.length }, 'Processed click batch');
+            await processBatch(entries, pool, redis, logger, false);
         } catch (err) {
             logger.error({ err }, 'Click consumer error — retrying after 2s');
             await new Promise((r) => setTimeout(r, 2000));

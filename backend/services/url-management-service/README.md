@@ -103,9 +103,9 @@ cache-aside style, for the redirect service to read from once it exists.
 ```bash
 cp services/url-management-service/.env.example services/url-management-service/.env
 docker compose -f docker-compose.yml up -d postgres redis
-npx @better-auth/cli migrate --cwd services/url-management-service --config src/infrastructure/auth/auth.ts -y
+npx better-auth migrate --cwd services/url-management-service --config src/infrastructure/auth/auth.ts -y
 npm run dev -w services/url-management-service
 ```
 
-(`npx @better-auth/cli migrate` sets up better-auth's own tables — the `urls` table this
+(`npx better-auth migrate` sets up better-auth's own tables — the `urls` table this
 service owns is created automatically on startup.)
