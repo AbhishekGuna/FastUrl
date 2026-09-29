@@ -59,7 +59,7 @@ async function main() {
     await app.register(authRoutes);
     await app.register(meRoutes);
     registerUrlRoutes(app, urlDeps);
-    registerAnalyticsRoutes(app, analyticsPool, urlDeps);
+    registerAnalyticsRoutes(app, analyticsPool, { getUrl: urlDeps.getUrl, cache });
 
     await app.listen({ port: config.port, host: '0.0.0.0' });
 
