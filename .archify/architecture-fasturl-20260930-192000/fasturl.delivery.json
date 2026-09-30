@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "da05801e-28ae-4e24-a299-76480103baff",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/home/guna-abhishek/IdeaProjects/FastUrl/.archify/architecture-fasturl-20260930-192000/candidate.json",
+  "output": "/home/guna-abhishek/IdeaProjects/FastUrl/.archify/architecture-fasturl-20260930-192000/fasturl.html",
+  "specification": {
+    "sha256": "a1efc17f4df54d9c8035e00c351d1b91cf34aacbd600de459addb7606e5b1203",
+    "bytes": 8577
+  },
+  "artifact": {
+    "sha256": "ca8eed21efcd533f950c681014726635f1ee525b576cce10679098c0f89cbb70",
+    "bytes": 776682
+  }
+}

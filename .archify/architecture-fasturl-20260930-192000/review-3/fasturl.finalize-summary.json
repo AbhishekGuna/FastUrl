@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/home/guna-abhishek/IdeaProjects/FastUrl/.archify/architecture-fasturl-20260930-192000/candidate.json",
+    "sha256": "a1efc17f4df54d9c8035e00c351d1b91cf34aacbd600de459addb7606e5b1203",
+    "bytes": 8577
+  },
+  "artifact": {
+    "path": "/home/guna-abhishek/IdeaProjects/FastUrl/.archify/architecture-fasturl-20260930-192000/fasturl.html",
+    "sha256": "ca8eed21efcd533f950c681014726635f1ee525b576cce10679098c0f89cbb70",
+    "bytes": 776682
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/guna-abhishek/IdeaProjects/FastUrl/.archify/architecture-fasturl-20260930-192000/review-3/fasturl.finalize.json",
+    "summaryReceipt": "/home/guna-abhishek/IdeaProjects/FastUrl/.archify/architecture-fasturl-20260930-192000/review-3/fasturl.finalize-summary.json",
+    "browserCheckReceipt": "/home/guna-abhishek/IdeaProjects/FastUrl/.archify/architecture-fasturl-20260930-192000/review-3/fasturl.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.0.1",
+    "availableVersion": "3.0.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-09-30T13:57:10.713Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 4323,
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 2,
+      "routesOverSuggestedBends": 4
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "redirect-redis-cache",
+            "from": "redirect",
+            "to": "redis",
+            "label": "cache lookup",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "right": {
+            "id": "redirect-postgres-fallback",
+            "from": "redirect",
+            "to": "postgres",
+            "label": "cache miss SQL",
+            "collectionIndex": 8,
+            "artifactIndex": 9
+          },
+          "point": [
+            675,
+            485
+          ],
+          "sharedNode": "redirect"
+        },
+        {
+          "left": {
+            "id": "redirect-postgres-fallback",
+            "from": "redirect",
+            "to": "postgres",
+            "label": "cache miss SQL",
+            "collectionIndex": 8,
+            "artifactIndex": 9
+          },
+          "right": {
+            "id": "consumer-reads-stream",
+            "from": "click_consumer",
+            "to": "redis",
+            "label": "XREADGROUP",
+            "collectionIndex": 10,
+            "artifactIndex": 11
+          },
+          "point": [
+            816,
+            388
+          ]
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "visitor-to-redirect",
+            "from": "visitor",
+            "to": "redirect",
+            "label": "GET /:shortCode",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "bends": 4,
+          "stretch": 1.103
+        },
+        {
+          "relationship": {
+            "id": "redirect-postgres-fallback",
+            "from": "redirect",
+            "to": "postgres",
+            "label": "cache miss SQL",
+            "collectionIndex": 8,
+            "artifactIndex": 9
+          },
+          "bends": 4,
+          "stretch": 1
+        },
+        {
+          "relationship": {
+            "id": "redirect-publish-click",
+            "from": "redirect",
+            "to": "redis",
+            "label": "XADD click",
+            "collectionIndex": 9,
+            "artifactIndex": 10
+          },
+          "bends": 4,
+          "stretch": 1
+        },
+        {
+          "relationship": {
+            "id": "consumer-reads-stream",
+            "from": "click_consumer",
+            "to": "redis",
+            "label": "XREADGROUP",
+            "collectionIndex": 10,
+            "artifactIndex": 11
+          },
+          "bends": 4,
+          "stretch": 1.246
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "redirect → redis and redirect → postgres cross next to redirect: move node redis or postgres so the two reach redirect from different sides (for example one level with it, one directly above or below it).",
+      "redirect → postgres crosses click_consumer → redis: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "visitor → redirect needs 4 bends: move node visitor or redirect so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "redirect → postgres needs 4 bends: move node redirect or postgres so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "redirect → redis needs 4 bends: move node redirect or redis so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "click_consumer → redis needs 4 bends: move node click_consumer or redis so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

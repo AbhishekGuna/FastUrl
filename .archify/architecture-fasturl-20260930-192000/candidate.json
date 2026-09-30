@@ -1,0 +1,314 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "FastUrl — System Architecture",
+    "subtitle": "URL shortener with async click analytics pipeline",
+    "output": ".archify/architecture-fasturl-20260930-192000/fasturl.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/AbhishekGuna/FastUrl.git",
+      "revision": "e67231b6f3d3609099498733d4004097304c2a7e"
+    }
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "User",
+      "sublabel": "Browser / React SPA",
+      "pos": [40, 280],
+      "size": [120, 60],
+      "sources": [
+        { "path": "frontend/src/api/client.ts", "line": 1 }
+      ]
+    },
+    {
+      "id": "visitor",
+      "type": "external",
+      "label": "Visitor",
+      "sublabel": "Short URL click",
+      "pos": [40, 460],
+      "size": [120, 60]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "React SPA",
+      "sublabel": "Vite · React 19",
+      "tag": "Vercel CDN",
+      "pos": [230, 280],
+      "size": [140, 60],
+      "sources": [
+        { "path": "frontend/src/main.tsx", "line": 1 },
+        { "path": "frontend/package.json", "line": 1 }
+      ]
+    },
+    {
+      "id": "ums",
+      "type": "backend",
+      "label": "URL Management Service",
+      "sublabel": "Fastify · Node.js",
+      "pos": [470, 180],
+      "size": [160, 64],
+      "sources": [
+        { "path": "backend/services/url-management-service/src/main.ts", "line": 22 }
+      ]
+    },
+    {
+      "id": "better_auth",
+      "type": "security",
+      "label": "Better Auth",
+      "sublabel": "Session · Bearer JWT",
+      "pos": [470, 60],
+      "size": [160, 60],
+      "sources": [
+        { "path": "backend/services/url-management-service/src/middleware/auth.middleware.ts", "line": 12 },
+        { "path": "backend/services/url-management-service/src/services/auth.ts", "line": 1 }
+      ]
+    },
+    {
+      "id": "redirect",
+      "type": "backend",
+      "label": "Redirect Service",
+      "sublabel": "Fastify · Node.js",
+      "pos": [470, 460],
+      "size": [160, 64],
+      "sources": [
+        { "path": "backend/services/redirect-service/src/main.ts", "line": 12 }
+      ]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis",
+      "sublabel": "Cache · Streams",
+      "pos": [720, 280],
+      "size": [140, 60],
+      "sources": [
+        { "path": "backend/services/url-management-service/src/redis/RedisCache.ts", "line": 1 },
+        { "path": "backend/services/redirect-service/src/redis/RedisEventPublisher.ts", "line": 8 }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "URLs · Auth · Clicks",
+      "pos": [940, 280],
+      "size": [140, 60],
+      "sources": [
+        { "path": "backend/services/url-management-service/src/db/PostgresUrlRepository.ts", "line": 1 },
+        { "path": "backend/services/url-management-service/src/db/ensureSchema.ts", "line": 1 }
+      ]
+    },
+    {
+      "id": "click_consumer",
+      "type": "backend",
+      "label": "Click Consumer",
+      "sublabel": "Redis XREADGROUP loop",
+      "pos": [720, 460],
+      "size": [160, 60],
+      "sources": [
+        { "path": "backend/services/url-management-service/src/workers/clickConsumer.ts", "line": 208 }
+      ]
+    },
+    {
+      "id": "geoip",
+      "type": "database",
+      "label": "GeoLite2 DB",
+      "sublabel": "MaxMind · City MMDB",
+      "pos": [720, 580],
+      "size": [160, 60],
+      "sources": [
+        { "path": "backend/services/url-management-service/src/workers/clickConsumer.ts", "line": 11 }
+      ]
+    },
+    {
+      "id": "rate_limit",
+      "type": "security",
+      "label": "Rate Limiter",
+      "sublabel": "@fastify/rate-limit",
+      "pos": [470, 340],
+      "size": [160, 56],
+      "sources": [
+        { "path": "backend/services/url-management-service/src/main.ts", "line": 38 }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Render.com — Managed Deployment",
+      "wraps": ["ums", "redirect", "better_auth", "rate_limit", "redis", "postgres", "click_consumer", "geoip"]
+    },
+    {
+      "kind": "security-group",
+      "label": "URL Management Service",
+      "wraps": ["ums", "better_auth", "rate_limit", "click_consumer"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-to-frontend",
+      "from": "browser",
+      "to": "frontend",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "frontend-to-ums",
+      "from": "frontend",
+      "to": "ums",
+      "label": "REST API",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "auth-check",
+      "from": "better_auth",
+      "to": "ums",
+      "label": "session validate",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "rate-limit-guard",
+      "from": "rate_limit",
+      "to": "ums",
+      "label": "guard",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "ums-redis-cache",
+      "from": "ums",
+      "to": "redis",
+      "label": "cache R/W",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "ums-postgres",
+      "from": "ums",
+      "to": "postgres",
+      "label": "SQL",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "visitor-to-redirect",
+      "from": "visitor",
+      "to": "redirect",
+      "label": "GET /:shortCode",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "redirect-redis-cache",
+      "from": "redirect",
+      "to": "redis",
+      "label": "cache lookup",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "redirect-postgres-fallback",
+      "from": "redirect",
+      "to": "postgres",
+      "label": "cache miss SQL",
+      "variant": "dashed"
+    },
+    {
+      "id": "redirect-publish-click",
+      "from": "redirect",
+      "to": "redis",
+      "label": "XADD click",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [634, 410]
+    },
+    {
+      "id": "consumer-reads-stream",
+      "from": "click_consumer",
+      "to": "redis",
+      "label": "XREADGROUP",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "consumer-geoip",
+      "from": "click_consumer",
+      "to": "geoip",
+      "label": "IP lookup",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "consumer-writes-clicks",
+      "from": "click_consumer",
+      "to": "postgres",
+      "label": "INSERT url_clicks",
+      "fromSide": "right",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Frontend",
+      "items": [
+        "React 19 SPA built with Vite, deployed on Vercel CDN",
+        "Bearer token in localStorage, sent as Authorization header",
+        "Pages: Dashboard, Analytics, Sign In, Sign Up"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "URL Management Service",
+      "items": [
+        "Fastify server: auth, rate-limit, CRUD, analytics routes",
+        "Better Auth validates session on every protected endpoint",
+        "base62-encoded short codes; custom alias support",
+        "Redis cache warm-up on URL create and update"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Redirect Service",
+      "items": [
+        "Resolves short code via Redis cache then Postgres fallback",
+        "Returns 301/302 immediately; click event is fire-and-forget",
+        "Publishes click event to Redis Stream (XADD) with IP, UA, referrer"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Click Analytics Pipeline",
+      "items": [
+        "Click Consumer runs inside URL Management Service process",
+        "XREADGROUP consumer group — at-least-once delivery with XAUTOCLAIM",
+        "MaxMind GeoLite2 MMDB for country/city enrichment",
+        "ua-parser-js for OS/browser/device enrichment",
+        "Bulk INSERT into url_clicks; failed rows routed to DLQ stream"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Security & Rate Limiting",
+      "items": [
+        "@fastify/helmet on all services",
+        "@fastify/rate-limit: 300 req/min backed by Redis",
+        "Better Auth session middleware on protected routes",
+        "CORS restricted to configured origins"
+      ]
+    }
+  ]
+}
