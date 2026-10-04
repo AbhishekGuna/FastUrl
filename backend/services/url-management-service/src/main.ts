@@ -2,12 +2,12 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyError } from 'fastify';
-import { Redis } from 'ioredis';
 import { Pool } from 'pg';
 import { config } from './config.js';
 import { ensureAnalyticsSchema, ensureAuthSchema, ensureUrlsTable } from './db/ensureSchema.js';
 import { PostgresUrlRepository } from './db/PostgresUrlRepository.js';
 import { pool } from './db/pool.js';
+import { redis } from './redis/client.js';
 import { RedisCache } from './redis/RedisCache.js';
 import { registerAnalyticsRoutes } from './routes/analytics.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
@@ -28,7 +28,6 @@ async function main() {
 
     const analyticsPool = new Pool({ connectionString: config.databaseUrl });
 
-    const redis = new Redis(config.redisUrl);
     const urlRepository = new PostgresUrlRepository(pool);
     const cache = new RedisCache(redis);
 

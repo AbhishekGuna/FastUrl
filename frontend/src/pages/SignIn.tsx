@@ -10,17 +10,24 @@ export function SignIn() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [unverified, setUnverified] = useState(false);
     const [pending, setPending] = useState(false);
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault();
         setPending(true);
         setError(null);
+        setUnverified(false);
         try {
             await signIn(email, password);
             navigate('/', { replace: true });
         } catch (err) {
-            setError(err instanceof ApiError ? err.message : "Couldn't sign in. Try again.");
+            if (err instanceof ApiError && err.status === 403) {
+                // Better Auth returns 403 when email is not verified yet
+                setUnverified(true);
+            } else {
+                setError(err instanceof ApiError ? err.message : "Couldn't sign in. Try again.");
+            }
         } finally {
             setPending(false);
         }
@@ -54,6 +61,12 @@ export function SignIn() {
                         />
                     </label>
 
+                    {unverified && (
+                        <p className="form-error">
+                            Please verify your email before signing in. Check your inbox for a
+                            verification link.
+                        </p>
+                    )}
                     {error && <p className="form-error">{error}</p>}
 
                     <button type="submit" className="primary-button auth-submit" disabled={pending}>

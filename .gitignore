@@ -38,4 +38,5 @@ coverage/
 # Backend load testing
 backend/loadtest-reports/
 
+# Generated diagram artifacts
 .agents/

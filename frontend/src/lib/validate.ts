@@ -1,5 +1,12 @@
+import {
+    getPasswordCriteria,
+    getPasswordError,
+    PASSWORD_CRITERIA_LABELS,
+    type PasswordContext,
+    type PasswordCriteria,
+} from './passwordPolicy';
+
 const ALIAS_PATTERN = /^[A-Za-z0-9_-]{1,16}$/;
-const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[\W_]).+$/;
 
 export function isValidDestination(value: string): boolean {
     try {
@@ -14,10 +21,14 @@ export function isValidAlias(value: string): boolean {
     return ALIAS_PATTERN.test(value);
 }
 
-export function passwordIssue(value: string): string | null {
-    if (value.length < 8) return 'At least 8 characters.';
-    if (!PASSWORD_PATTERN.test(value)) {
-        return 'One uppercase letter, one lowercase letter, one number, one special character.';
-    }
-    return null;
+/**
+ * Returns the first unmet password rule as a human-readable string, or null.
+ * Drop-in replacement for the old regex-based check.
+ */
+export function passwordIssue(value: string, context?: PasswordContext): string | null {
+    return getPasswordError(value, context);
 }
+
+export type { PasswordContext, PasswordCriteria };
+// Re-export the full API so other components can use it directly
+export { getPasswordCriteria, getPasswordError, PASSWORD_CRITERIA_LABELS };
