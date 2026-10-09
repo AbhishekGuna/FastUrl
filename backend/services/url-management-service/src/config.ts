@@ -8,11 +8,13 @@ export const config = {
     authUrl: process.env.BETTER_AUTH_URL ?? `http://localhost:${port}`,
     shortUrlBase: process.env.SHORT_URL_BASE ?? `http://localhost:${port}`,
     corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:8080').split(','),
-    // ── Email (SendGrid) ────────────────────────────────────────────────────────
+
+    frontendUrl: process.env.FRONTEND_URL ?? 'redis://localhost:8080',
+
     sendgridApiKey: process.env.SENDGRID_API_KEY ?? '',
     emailFrom: process.env.EMAIL_FROM ?? 'noreply@fasturl.dev',
     emailFromName: process.env.EMAIL_FROM_NAME ?? 'FastUrl',
-    // ── Internal ────────────────────────────────────────────────────────────────
+
     streamKey: 'url.clicks.stream',
     consumerGroup: 'analytics-workers',
     consumerName: `worker-${process.pid}`,

@@ -25,6 +25,8 @@ export const auth = betterAuth({
         sendOnSignUp: true,
         sendOnSignIn: true,
         autoSignInAfterVerification: true,
+        expiresIn: 5 * 60,
+        redirectTo: config.frontendUrl,
         sendVerificationEmail: async ({ user, url }) => {
             void sendVerificationEmail(user.email, url).catch((e) => console.error(e));
         },
@@ -43,7 +45,7 @@ export const auth = betterAuth({
             await redis.expire(k, ttl, 'NX');
             return count;
         },
-        
+
         set: async (key, value, ttl) => {
             if (ttl) await redis.set(authKey(key), value, 'EX', ttl);
             else await redis.set(authKey(key), value);

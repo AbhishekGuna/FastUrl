@@ -6,6 +6,12 @@
             "sourceType": "github",
             "skillPath": "archify/SKILL.md",
             "computedHash": "97190f1668a81e3228b4f69263ddba479b3bd537e58b1065da4034781129f76f"
+        },
+        "better-auth-best-practices": {
+            "source": "better-auth/skills",
+            "sourceType": "github",
+            "skillPath": "better-auth/best-practices/SKILL.md",
+            "computedHash": "0c30be0e118c2b7a0c4c57bd9e63bf110c7e420a79ec6ce7997153f3b1e066ee"
         }
     }
 }

@@ -24,7 +24,7 @@ export async function sendMail({ to, subject, html, text }: MailOptions): Promis
             html,
             ...(text ? { text } : {}),
         });
-    } catch (error : any) {
+    } catch (error: any) {
         console.error('SendGrid error:', {
             code: error.code,
             message: error.message,
@@ -62,7 +62,7 @@ export async function sendVerificationEmail(to: string, verificationUrl: string)
             Verify email
           </a>
           <p style="margin:24px 0 0;font-size:12px;color:#999;line-height:1.6;">
-            This link expires in <strong>24 hours</strong>. If you didn't create a FastUrl account, ignore this email.
+            This link expires in <strong>5 min</strong>. If you didn't create a FastUrl account, ignore this email.
           </p>
         </td></tr>
       </table>
