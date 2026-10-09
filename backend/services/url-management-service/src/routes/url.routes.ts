@@ -66,6 +66,7 @@ export function registerUrlRoutes(app: FastifyInstance, deps: Deps) {
 
     app.get('/api/v1/urls', { preHandler: requireAuth }, async (request, reply) => {
         const userId = request.user?.id;
+        console.log('listUrls userId:', userId);
         if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
         const parsedQuery = ListUrlsQuerySchema.safeParse(request.query);

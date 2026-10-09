@@ -16,16 +16,22 @@ export interface MailOptions {
  * Throws on non-2xx responses so callers can handle delivery failures.
  */
 export async function sendMail({ to, subject, html, text }: MailOptions): Promise<void> {
-    await sgMail.send({
-        to,
-        from: {
-            email: config.emailFrom,
-            name: config.emailFromName,
-        },
-        subject,
-        html,
-        ...(text ? { text } : {}),
-    });
+    try {
+        await sgMail.send({
+            to,
+            from: config.emailFrom,
+            subject,
+            html,
+            ...(text ? { text } : {}),
+        });
+    } catch (error : any) {
+        console.error('SendGrid error:', {
+            code: error.code,
+            message: error.message,
+            body: error.response?.body,
+        });
+        console.dir(error.response?.body, { depth: null });
+    }
 }
 
 // ── Pre-built templates ────────────────────────────────────────────────────────

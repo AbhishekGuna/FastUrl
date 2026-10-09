@@ -1,9 +1,12 @@
 import { betterAuth } from 'better-auth';
-import { bearer, haveIBeenPwned } from 'better-auth/plugins';
+import { bearer } from 'better-auth/plugins';
 import { config } from '../config.js';
 import { pool } from '../db/pool.js';
 import { redis } from '../redis/client.js';
 import { sendVerificationEmail } from '../utils/mailer.js';
+
+const AUTH_KEY_PREFIX = 'auth:';
+const authKey = (key: string) => `${AUTH_KEY_PREFIX}${key}`;
 
 export const auth = betterAuth({
     database: pool,
@@ -11,58 +14,59 @@ export const auth = betterAuth({
     trustedOrigins: config.corsOrigins,
     secret: config.authSecret,
 
-    // ── 1: Email & Password with length enforcement ────────────────────────────
     emailAndPassword: {
         enabled: true,
         minPasswordLength: 8,
         maxPasswordLength: 64,
+        requireEmailVerification: true,
     },
 
-    // ── 1: Email Verification ─────────────────────────────────────────────────
     emailVerification: {
         sendOnSignUp: true,
+        sendOnSignIn: true,
         autoSignInAfterVerification: true,
         sendVerificationEmail: async ({ user, url }) => {
-            await sendVerificationEmail(user.email, url);
+            void sendVerificationEmail(user.email, url).catch((e) => console.error(e));
         },
     },
 
-    // ── 3: Redis-backed secondary storage (rate limits survive restarts) ──────
     secondaryStorage: {
-        get: async (key) => {
-            const val = await redis.get(key);
-            return val ?? null;
-        },
-        // Atomically get-then-delete (used by one-time tokens)
+        get: async (key) => (await redis.get(authKey(key))) ?? null,
+
         getAndDelete: async (key) => {
-            const [val] = (await redis.pipeline().get(key).del(key).exec()) ?? [];
-            return (val?.[1] as string | null) ?? null;
+            return await redis.getdel(authKey(key));
         },
-        // Atomic increment with TTL on creation (rate-limit counter)
+
         increment: async (key, ttl) => {
-            const pipeline = redis.pipeline().incr(key).expire(key, ttl, 'NX');
-            const results = await pipeline.exec();
-            return (results?.[0]?.[1] as number) ?? 1;
+            const k = authKey(key);
+            const count = await redis.incr(k);
+            await redis.expire(k, ttl, 'NX');
+            return count;
         },
+        
         set: async (key, value, ttl) => {
-            if (ttl) {
-                await redis.set(key, value, 'EX', ttl);
-            } else {
-                await redis.set(key, value);
-            }
+            if (ttl) await redis.set(authKey(key), value, 'EX', ttl);
+            else await redis.set(authKey(key), value);
         },
+
         delete: async (key) => {
-            await redis.del(key);
+            await redis.del(authKey(key));
         },
     },
 
-    // ── 3: Built-in rate limiting (stricter on auth endpoints) ────────────────
     rateLimit: {
-        window: 60, // 1 minute
-        max: 100, // generous default; /sign-in/email has its own 3/10s rule
+        enabled: true,
+        storage: 'secondary-storage',
+        window: 60,
+        max: 100,
+        customRules: {
+            '/sign-in/email': { window: 60, max: 5 },
+            '/sign-up/email': { window: 60, max: 3 },
+            '/forget-password': { window: 300, max: 3 },
+            '/send-verification-email': { window: 300, max: 3 },
+        },
     },
 
-    // ── 4: Session with sliding expiry + cookie cache (avoids DB on each req) ─
     session: {
         expiresIn: 60 * 60 * 24 * 7, // 7 days
         updateAge: 60 * 60 * 24, // extend on every day of activity
@@ -72,13 +76,5 @@ export const auth = betterAuth({
         },
     },
 
-    plugins: [
-        bearer(),
-        // ── 2: HIBP pwned-password check (k-anonymity, production only) ──────
-        haveIBeenPwned({
-            enabled: process.env.NODE_ENV === 'production',
-            customPasswordCompromisedMessage:
-                'This password has appeared in a data breach. Please choose a different password.',
-        }),
-    ],
+    plugins: [bearer()],
 });
